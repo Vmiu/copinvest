@@ -40,17 +40,19 @@
 - [ ] **AUDIT-04**: Adviser action (sent/discarded/saved) is recorded in the audit trail
 - [ ] **AUDIT-05**: Audit records include which sensitivity tier was accessed per query
 
-### Web UI
+### Telegram Bot (Primary Adviser Interface)
 
-- [ ] **UI-01**: User can type a question and see a streaming response rendered in real-time
-- [ ] **UI-02**: Each response displays a source attribution panel showing which documents were used
-- [ ] **UI-03**: All generated output is labeled as "Draft" and requires explicit adviser review before use
-- [ ] **UI-04**: User can mark a response as "sent", "edited", or "discarded" to record their action
-
-### Telegram Bot
-
-- [ ] **TELE-01**: User can send a text message to the Telegram bot and receive a text answer with source citations
+- [ ] **TELE-01**: Adviser can send a text message to the Telegram bot and receive a text answer with inline source citations (document name and section reference)
 - [ ] **TELE-02**: Telegram bot validates webhook secret on every incoming request
+- [ ] **TELE-03**: Bot presents each generated answer as a draft with an inline keyboard offering Approve / Edit / Discard actions before the response is considered final
+- [ ] **TELE-04**: Adviser action (approved/edited/discarded) selected via inline keyboard is recorded in the audit trail against the originating query
+
+### Web Audit & Admin UI
+
+- [ ] **UI-01**: Admin/compliance user can browse the audit log filtered by session, user, and date range
+- [ ] **UI-02**: Admin can open any audit record and view the full trace: query → retrieved chunks → prompt sent → LLM response → adviser action
+- [ ] **UI-03**: Admin can view the document registry showing all ingested documents with their sensitivity tier, chunk count, and ingestion date
+- [ ] **UI-04**: Admin can trigger document ingestion and assign sensitivity tiers through the UI without using the CLI
 
 ## v2 Requirements
 
@@ -98,41 +100,43 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INGEST-01 | — | Pending |
-| INGEST-02 | — | Pending |
-| INGEST-03 | — | Pending |
-| INGEST-04 | — | Pending |
-| INGEST-05 | — | Pending |
-| INGEST-06 | — | Pending |
-| INGEST-07 | — | Pending |
-| INGEST-08 | — | Pending |
-| RAG-01 | — | Pending |
-| RAG-02 | — | Pending |
-| RAG-03 | — | Pending |
-| RAG-04 | — | Pending |
-| RAG-05 | — | Pending |
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| AUDIT-01 | — | Pending |
-| AUDIT-02 | — | Pending |
-| AUDIT-03 | — | Pending |
-| AUDIT-04 | — | Pending |
-| AUDIT-05 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| TELE-01 | — | Pending |
-| TELE-02 | — | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| AUDIT-01 | Phase 1 | Pending |
+| AUDIT-02 | Phase 1 | Pending |
+| AUDIT-03 | Phase 1 | Pending |
+| AUDIT-04 | Phase 1 | Pending |
+| AUDIT-05 | Phase 1 | Pending |
+| INGEST-01 | Phase 2 | Pending |
+| INGEST-02 | Phase 2 | Pending |
+| INGEST-03 | Phase 2 | Pending |
+| INGEST-04 | Phase 2 | Pending |
+| INGEST-05 | Phase 2 | Pending |
+| INGEST-06 | Phase 2 | Pending |
+| INGEST-07 | Phase 2 | Pending |
+| INGEST-08 | Phase 2 | Pending |
+| RAG-01 | Phase 3 | Pending |
+| RAG-02 | Phase 3 | Pending |
+| RAG-03 | Phase 3 | Pending |
+| RAG-04 | Phase 3 | Pending |
+| RAG-05 | Phase 3 | Pending |
+| TELE-01 | Phase 4 | Pending |
+| TELE-02 | Phase 4 | Pending |
+| TELE-03 | Phase 4 | Pending |
+| TELE-04 | Phase 4 | Pending |
+| UI-01 | Phase 5 | Pending |
+| UI-02 | Phase 5 | Pending |
+| UI-03 | Phase 5 | Pending |
+| UI-04 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 29 total
-- Mapped to phases: 0
-- Unmapped: 29 ⚠️
+- v1 requirements: 31 total
+- Mapped to phases: 31
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 after initial definition*
+*Last updated: 2026-04-29 — Telegram expanded to primary interface (TELE-03, TELE-04 added); UI requirements rewritten as audit/admin dashboard*
