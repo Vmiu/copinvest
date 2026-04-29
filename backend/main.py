@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from backend.core.database import engine
 from backend.models.base import Base
+from backend.routers.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -15,6 +16,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CopInvest", lifespan=lifespan)
+app.include_router(auth_router)
 
 
 @app.get("/health")
