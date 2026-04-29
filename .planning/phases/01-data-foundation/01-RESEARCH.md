@@ -421,22 +421,19 @@ volumes:
 | A4 | HS256 is sufficient for JWT signing | Security | Symmetric key is fine for single-server. Would need RS256 for distributed. |
 | A5 | pytest-asyncio 0.26.0 is more stable than 1.x | Dev/Test | 1.x may work fine; 0.26.0 is battle-tested. Low risk either way. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **SFC audit retention period**
+1. **SFC audit retention period** — RESOLVED: Design schema to support long retention (partitioning-ready). Confirm exact period before production. Does not block Phase 1 implementation.
    - What we know: PITFALLS.md mentions "typically 7 years" for investment advice records in HK
    - What's unclear: Exact requirement from primary SFC source. STATE.md flags this as open.
-   - Recommendation: Design schema to support long retention (partitioning-ready). Confirm exact period before production. Does not block Phase 1 implementation.
 
-2. **JWT refresh strategy**
+2. **JWT refresh strategy** — RESOLVED: Start with 24h access tokens, no refresh tokens. Simpler for v1 prototype. Add refresh tokens if needed later.
    - What we know: D-07 says role in JWT. AUTH-02 says session persists across refresh.
    - What's unclear: Should we use refresh tokens or just long-lived access tokens?
-   - Recommendation: Start with 24h access tokens, no refresh tokens. Simpler for v1 prototype. Add refresh tokens if needed later.
 
-3. **Audit record immutability vs progressive updates**
+3. **Audit record immutability vs progressive updates** — RESOLVED: For v1, use UPDATE (progressive). Immutable append-only is a v2 requirement (AUDIT-V2-01). Document this as a known v1 limitation.
    - What we know: D-08 specifies progressive updates. ARCHITECTURE.md Pattern 2 says INSERT-only.
    - What's unclear: These conflict. Progressive updates require UPDATE; immutability requires INSERT-only.
-   - Recommendation: For v1, use UPDATE (progressive). Immutable append-only is a v2 requirement (AUDIT-V2-01). Document this as a known v1 limitation.
 
 ## Environment Availability
 
