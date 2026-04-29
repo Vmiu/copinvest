@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-03-PLAN.md — Audit trail and session management services
+stopped_at: Completed 01-04-PLAN.md — Qdrant vector repository with RBAC pre-filtering
 last_updated: "2026-04-29"
-last_activity: "2026-04-29 — Executed 01-03: Progressive audit lifecycle, session timeout, audit repo, 10 tests"
+last_activity: "2026-04-29 — Executed 01-04: Qdrant RBAC pre-filtering, 5 tests, AUTH-04/AUTH-05 proven"
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 15
+  completed_plans: 4
+  percent: 20
 ---
 
 # Project State
@@ -26,29 +26,29 @@ See: .planning/PROJECT.md (updated 2026-04-29)
 ## Current Position
 
 Phase: 1 of 5 (Data Foundation)
-Plan: 3 of 4 in current phase
+Plan: 4 of 4 in current phase
 Status: Executing
-Last activity: 2026-04-29 — Executed 01-03: Progressive audit lifecycle, session timeout, audit repo, 10 tests
+Last activity: 2026-04-29 — Executed 01-04: Qdrant RBAC pre-filtering, 5 tests, AUTH-04/AUTH-05 proven
 
-Progress: [███░░░░░░░] 15%
+Progress: [████░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
-- Average duration: 4.7min
-- Total execution time: 0.2 hours
+- Total plans completed: 4
+- Average duration: 4.3min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-data-foundation | 3 | 14min | 4.7min |
+| 01-data-foundation | 4 | 17min | 4.3min |
 
 **Recent Trend:**
 
-- Last 5 plans: 5min, 6min, 3min
+- Last 5 plans: 5min, 6min, 3min, 3min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -71,6 +71,8 @@ Recent decisions affecting current work:
 - 01-02: Alembic async env.py reads DB URL from get_settings() (not hardcoded in alembic.ini)
 - 01-03: Used db.flush() in service functions (not commit) -- caller controls transaction boundary
 - 01-03: Normalized datetime comparison to naive UTC for SQLite compatibility
+- 01-04: RBAC filtering uses single MatchValue on allowed_roles -- Qdrant pre-filters before ANN search
+- 01-04: Lifespan wraps Qdrant init in try/except so app starts without Docker running
 
 ### Pending Todos
 
@@ -90,5 +92,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-04-29
-Stopped at: Completed 01-02-PLAN.md — JWT auth, login endpoint, user seeding, Alembic migrations
-Resume file: .planning/phases/01-data-foundation/01-03-PLAN.md
+Stopped at: Completed 01-04-PLAN.md — Qdrant vector repository with RBAC pre-filtering
+Resume file: Phase 1 complete. Next: Phase 2 planning.

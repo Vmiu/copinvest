@@ -36,7 +36,7 @@ Plans:
 - [x] 01-01-PLAN.md — Project scaffold, models, config, database, Docker Compose, test infrastructure
 - [x] 01-02-PLAN.md — Auth system: JWT, password hashing, login endpoint, user seeding
 - [x] 01-03-PLAN.md — Audit trail and session management services with progressive lifecycle
-- [ ] 01-04-PLAN.md — Qdrant RBAC: collection setup, pre-retrieval filtering, access control tests
+- [x] 01-04-PLAN.md — Qdrant RBAC: collection setup, pre-retrieval filtering, access control tests
 
 ### Phase 2: Document Ingestion
 **Goal**: Admins can ingest PDF, Word, and Excel documents with sensitivity tiers assigned, and all content is correctly chunked and embedded in Qdrant with full metadata
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 3/4 | Executing | - |
+| 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
 | 2. Document Ingestion | 0/TBD | Not started | - |
 | 3. RAG Query Pipeline | 0/TBD | Not started | - |
 | 4. Telegram Bot | 0/TBD | Not started | - |

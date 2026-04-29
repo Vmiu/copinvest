@@ -29,8 +29,8 @@
 - [x] **AUTH-01**: User can log in with email and password and receive a JWT token
 - [x] **AUTH-02**: User session persists across browser refresh via stored JWT
 - [x] **AUTH-03**: Each user has a role (adviser, senior_adviser, compliance) that determines document access
-- [ ] **AUTH-04**: Document retrieval is filtered by user role at the vector store query layer (pre-retrieval, not post-retrieval)
-- [ ] **AUTH-05**: A junior adviser cannot retrieve or see any content from Restricted or Confidential tier documents
+- [x] **AUTH-04**: Document retrieval is filtered by user role at the vector store query layer (pre-retrieval, not post-retrieval)
+- [x] **AUTH-05**: A junior adviser cannot retrieve or see any content from Restricted or Confidential tier documents
 
 ### Audit Trail
 
@@ -103,8 +103,8 @@
 | AUTH-01 | Phase 1 | Complete (01-02) |
 | AUTH-02 | Phase 1 | Complete (01-02) |
 | AUTH-03 | Phase 1 | Complete (01-01) |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Complete (01-04) |
+| AUTH-05 | Phase 1 | Complete (01-04) |
 | AUDIT-01 | Phase 1 | Complete (01-01) |
 | AUDIT-02 | Phase 1 | Complete (01-03) |
 | AUDIT-03 | Phase 1 | Complete (01-03) |
