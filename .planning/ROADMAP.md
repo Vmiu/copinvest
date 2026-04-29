@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold, models, config, database, Docker Compose, test infrastructure
-- [ ] 01-02-PLAN.md — Auth system: JWT, password hashing, login endpoint, user seeding
+- [x] 01-02-PLAN.md — Auth system: JWT, password hashing, login endpoint, user seeding
 - [ ] 01-03-PLAN.md — Audit trail and session management services with progressive lifecycle
 - [ ] 01-04-PLAN.md — Qdrant RBAC: collection setup, pre-retrieval filtering, access control tests
 
@@ -92,7 +92,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 1/4 | Executing | - |
+| 1. Data Foundation | 2/4 | Executing | - |
 | 2. Document Ingestion | 0/TBD | Not started | - |
 | 3. RAG Query Pipeline | 0/TBD | Not started | - |
 | 4. Telegram Bot | 0/TBD | Not started | - |
