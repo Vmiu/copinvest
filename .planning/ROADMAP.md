@@ -12,7 +12,7 @@ Build a compliance-aware RAG assistant for HK investment advisers in five phases
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Data Foundation** - Auth, RBAC, audit schema, and Qdrant/PostgreSQL infrastructure
+- [x] **Phase 1: Data Foundation** - Auth, RBAC, audit schema, and Qdrant/PostgreSQL infrastructure (completed 2026-04-29)
 - [ ] **Phase 2: Document Ingestion** - Parse PDF/Word/Excel, chunk, tag metadata, embed into Qdrant
 - [ ] **Phase 3: RAG Query Pipeline** - Filtered retrieval, reranking, generation, audit logging
 - [ ] **Phase 4: Telegram Bot** - Primary adviser interface: Q&A with source citations, draft review flow, action tracking
