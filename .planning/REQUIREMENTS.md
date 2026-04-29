@@ -28,13 +28,13 @@
 
 - [ ] **AUTH-01**: User can log in with email and password and receive a JWT token
 - [ ] **AUTH-02**: User session persists across browser refresh via stored JWT
-- [ ] **AUTH-03**: Each user has a role (adviser, senior_adviser, compliance) that determines document access
+- [x] **AUTH-03**: Each user has a role (adviser, senior_adviser, compliance) that determines document access
 - [ ] **AUTH-04**: Document retrieval is filtered by user role at the vector store query layer (pre-retrieval, not post-retrieval)
 - [ ] **AUTH-05**: A junior adviser cannot retrieve or see any content from Restricted or Confidential tier documents
 
 ### Audit Trail
 
-- [ ] **AUDIT-01**: Every query produces an audit record with: trace_id, user_id, timestamp, query_text, retrieved_chunks, prompt_sent, llm_response, model_version
+- [x] **AUDIT-01**: Every query produces an audit record with: trace_id, user_id, timestamp, query_text, retrieved_chunks, prompt_sent, llm_response, model_version
 - [ ] **AUDIT-02**: Audit records are grouped by session, each session recorded with start/end DateTime
 - [ ] **AUDIT-03**: Audit records include the exact pinned model version used for generation
 - [ ] **AUDIT-04**: Adviser action (sent/discarded/saved) is recorded in the audit trail
@@ -102,10 +102,10 @@
 |-------------|-------|--------|
 | AUTH-01 | Phase 1 | Pending |
 | AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Complete (01-01) |
 | AUTH-04 | Phase 1 | Pending |
 | AUTH-05 | Phase 1 | Pending |
-| AUDIT-01 | Phase 1 | Pending |
+| AUDIT-01 | Phase 1 | Complete (01-01) |
 | AUDIT-02 | Phase 1 | Pending |
 | AUDIT-03 | Phase 1 | Pending |
 | AUDIT-04 | Phase 1 | Pending |
