@@ -62,15 +62,15 @@ def test_jwt_has_expiry():
 
 
 def test_decode_expired_token():
+    from backend.core.config import get_settings
     from backend.core.security import decode_access_token
 
-    # Create a token that's already expired
     expired_payload = {
         "sub": "user1",
         "role": "adviser",
         "exp": datetime.now(timezone.utc) - timedelta(hours=1),
     }
-    token = jwt.encode(expired_payload, "testsecret", algorithm="HS256")
+    token = jwt.encode(expired_payload, get_settings().secret_key, algorithm="HS256")
     with pytest.raises(jwt.ExpiredSignatureError):
         decode_access_token(token)
 
