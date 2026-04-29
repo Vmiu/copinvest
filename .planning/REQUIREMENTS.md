@@ -35,10 +35,10 @@
 ### Audit Trail
 
 - [x] **AUDIT-01**: Every query produces an audit record with: trace_id, user_id, timestamp, query_text, retrieved_chunks, prompt_sent, llm_response, model_version
-- [ ] **AUDIT-02**: Audit records are grouped by session, each session recorded with start/end DateTime
-- [ ] **AUDIT-03**: Audit records include the exact pinned model version used for generation
-- [ ] **AUDIT-04**: Adviser action (sent/discarded/saved) is recorded in the audit trail
-- [ ] **AUDIT-05**: Audit records include which sensitivity tier was accessed per query
+- [x] **AUDIT-02**: Audit records are grouped by session, each session recorded with start/end DateTime
+- [x] **AUDIT-03**: Audit records include the exact pinned model version used for generation
+- [x] **AUDIT-04**: Adviser action (sent/discarded/saved) is recorded in the audit trail
+- [x] **AUDIT-05**: Audit records include which sensitivity tier was accessed per query
 
 ### Telegram Bot (Primary Adviser Interface)
 
@@ -106,10 +106,10 @@
 | AUTH-04 | Phase 1 | Pending |
 | AUTH-05 | Phase 1 | Pending |
 | AUDIT-01 | Phase 1 | Complete (01-01) |
-| AUDIT-02 | Phase 1 | Pending |
-| AUDIT-03 | Phase 1 | Pending |
-| AUDIT-04 | Phase 1 | Pending |
-| AUDIT-05 | Phase 1 | Pending |
+| AUDIT-02 | Phase 1 | Complete (01-03) |
+| AUDIT-03 | Phase 1 | Complete (01-03) |
+| AUDIT-04 | Phase 1 | Complete (01-03) |
+| AUDIT-05 | Phase 1 | Complete (01-03) |
 | INGEST-01 | Phase 2 | Pending |
 | INGEST-02 | Phase 2 | Pending |
 | INGEST-03 | Phase 2 | Pending |
