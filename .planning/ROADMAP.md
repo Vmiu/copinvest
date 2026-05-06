@@ -48,7 +48,13 @@ Plans:
   3. Each chunk in Qdrant carries source_id, doc_type, sensitivity_tier, and allowed_roles metadata
   4. Financial tables are stored as complete chunks — no table is split across chunk boundaries
   5. Ingestion produces a log entry per document with character count, warnings, and extraction method
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [x] 02-01-PLAN.md — Foundation: DocumentRecord model, Alembic migration, document_repo, vector_repo extensions, IngestResponse schema, require_role dependency
+- [ ] 02-02-PLAN.md — Ingest endpoint: POST /api/ingest with file upload, validation, and pipeline orchestration
+- [ ] 02-03-PLAN.md — Document parser: docling integration for PDF, Word, Excel parsing
+- [ ] 02-04-PLAN.md — LLM chunking: gpt-4o-mini semantic chunking with table integrity
 
 ### Phase 3: RAG Query Pipeline
 **Goal**: Users can ask natural language questions and receive accurate, source-attributed answers drawn only from approved documents, with every interaction audited
@@ -93,7 +99,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
-| 2. Document Ingestion | 0/TBD | Not started | - |
+| 2. Document Ingestion | 1/4 | In Progress | - |
 | 3. RAG Query Pipeline | 0/TBD | Not started | - |
 | 4. Telegram Bot | 0/TBD | Not started | - |
 | 5. Web Audit & Admin UI | 0/TBD | Not started | - |

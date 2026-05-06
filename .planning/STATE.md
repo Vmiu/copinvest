@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready-to-execute
-stopped_at: Phase 2 planned — 4 plans in 3 waves
-last_updated: "2026-05-01T12:00:00.000Z"
-last_activity: "2026-05-01 — Phase 2 planned: 4 plans, 3 waves, 8/8 INGEST requirements covered"
+status: executing
+stopped_at: Phase 2 executing — Wave 1
+last_updated: "2026-05-06T19:45:00.000Z"
+last_activity: "2026-05-06 — Phase 2 Plan 01 complete: Foundation — Models, Migration, Repos, Config, Schemas"
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-29)
 
 **Core value:** Advisers can ask a question and get an accurate, source-attributed answer from approved internal documents — with every interaction fully auditable.
-**Current focus:** Phase 1 complete — ready for Phase 2 (Document Ingestion)
+**Current focus:** Phase 2 Wave 1 — 02-01 complete, continuing to 02-02
 
 ## Current Position
 
 Phase: 2 of 5 (Document Ingestion)
-Plan: 0 of 4 in current phase
-Status: Ready to execute
-Last activity: 2026-05-01 — Phase 2 planned: 4 plans, 3 waves, 8/8 INGEST requirements covered
+Plan: 1 of 4 in current phase
+Status: Executing Wave 1
+Last activity: 2026-05-06 — Phase 2 Plan 01 complete: Foundation
 
 Progress: [████░░░░░░] 20%
 
@@ -36,19 +36,20 @@ Progress: [████░░░░░░] 20%
 
 **Velocity:**
 
-- Total plans completed: 4
-- Average duration: 4.3min
-- Total execution time: 0.3 hours
+- Total plans completed: 5
+- Average duration: 4.4min
+- Total execution time: 0.4 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-data-foundation | 4 | 17min | 4.3min |
+| 02-document-ingestion | 1 | 15min | 15min |
 
 **Recent Trend:**
 
-- Last 5 plans: 5min, 6min, 3min, 3min
+- Last 5 plans: 5min, 6min, 3min, 3min, 15min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -73,6 +74,9 @@ Recent decisions affecting current work:
 - 01-03: Normalized datetime comparison to naive UTC for SQLite compatibility
 - 01-04: RBAC filtering uses single MatchValue on allowed_roles -- Qdrant pre-filters before ANN search
 - 01-04: Lifespan wraps Qdrant init in try/except so app starts without Docker running
+- 02-01: openai_api_key has no default — forces explicit env config, never logged (T-02-05)
+- 02-01: upsert_chunks generates UUID point IDs — avoids ID conflicts across re-ingestion cycles
+- 02-01: require_role(*roles) factory pattern for role-based endpoint protection
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-01T12:00:00.000Z
-Stopped at: Phase 2 planned — 4 plans in 3 waves
-Resume file: .planning/phases/02-document-ingestion/02-01-PLAN.md
+Last session: 2026-05-06T19:45:00.000Z
+Stopped at: Phase 2 Plan 01 complete — Foundation
+Resume file: .planning/phases/02-document-ingestion/02-02-PLAN.md
