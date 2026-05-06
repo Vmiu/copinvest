@@ -2,7 +2,7 @@ import uuid
 from pathlib import Path
 
 import structlog
-from openai import OpenAI
+from ollama import Client as OllamaClient
 from pypdf import PdfReader
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct
@@ -13,7 +13,6 @@ logger = structlog.get_logger()
 
 CHUNK_SIZE = 500      # characters
 CHUNK_OVERLAP = 100
-EMBEDDING_MODEL = "text-embedding-3-small"
 
 # Which roles can access each tier
 TIER_ROLES: dict[str, list[str]] = {
@@ -37,22 +36,25 @@ def _chunk_text(text: str) -> list[str]:
     return [c for c in chunks if len(c) > 50]  # drop tiny chunks
 
 
-def _embed(texts: list[str], client: OpenAI) -> list[list[float]]:
-    response = client.embeddings.create(model=EMBEDDING_MODEL, input=texts)
-    return [item.embedding for item in response.data]
+def _embed(texts: list[str], client: OllamaClient, model: str) -> list[list[float]]:
+    response = client.embed(model=model, input=texts)
+    return response["embeddings"]
 
 
 def ingest_document(
     pdf_path: Path,
     sensitivity_tier: str,
     qdrant: QdrantClient,
-    openai_client: OpenAI,
+    ollama_client: OllamaClient | None = None,
     collection: str | None = None,
 ) -> dict:
     settings = get_settings()
     collection = collection or settings.qdrant_collection
     allowed_roles = TIER_ROLES[sensitivity_tier]
-    tier_int = 2 if sensitivity_tier == "internal" else 3  # maps to SensitivityTier enum
+    tier_int = 2 if sensitivity_tier == "internal" else 3
+
+    if ollama_client is None:
+        ollama_client = OllamaClient(host=settings.ollama_base_url)
 
     logger.info("ingesting_document", path=str(pdf_path), tier=sensitivity_tier)
 
@@ -61,11 +63,11 @@ def ingest_document(
 
     logger.info("chunks_created", count=len(chunks), source=pdf_path.name)
 
-    # Embed in batches of 100
+    # Embed in batches of 64
     all_embeddings = []
-    for i in range(0, len(chunks), 100):
-        batch = chunks[i : i + 100]
-        all_embeddings.extend(_embed(batch, openai_client))
+    for i in range(0, len(chunks), 64):
+        batch = chunks[i : i + 64]
+        all_embeddings.extend(_embed(batch, ollama_client, settings.ollama_embed_model))
 
     points = [
         PointStruct(

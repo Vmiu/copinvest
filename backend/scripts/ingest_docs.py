@@ -2,11 +2,11 @@
 Run from project root:
     python -m backend.scripts.ingest_docs
 """
-import os
 from pathlib import Path
 
-from openai import OpenAI
+from ollama import Client as OllamaClient
 
+from backend.core.config import get_settings
 from backend.repositories.vector_repo import get_qdrant_client, setup_collection
 from backend.services.ingestion_service import ingest_document
 
@@ -14,11 +14,8 @@ DOCS_ROOT = Path(__file__).parents[3] / "docs"
 
 
 def main():
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY environment variable not set")
-
-    openai_client = OpenAI(api_key=api_key)
+    settings = get_settings()
+    ollama_client = OllamaClient(host=settings.ollama_base_url)
     qdrant = get_qdrant_client()
     setup_collection(qdrant)
 
@@ -28,7 +25,7 @@ def main():
         if not tier_dir.exists():
             continue
         for pdf in sorted(tier_dir.glob("*.pdf")):
-            result = ingest_document(pdf, tier, qdrant, openai_client)
+            result = ingest_document(pdf, tier, qdrant, ollama_client)
             results.append(result)
 
     print("\n=== Ingestion Summary ===")
