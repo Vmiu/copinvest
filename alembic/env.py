@@ -9,6 +9,7 @@ from alembic import context
 from backend.core.config import get_settings
 from backend.models.base import Base
 import backend.models.user  # noqa: F401 — register models for autogenerate
+import backend.models.document  # noqa: F401 — register DocumentRecord for autogenerate
 
 config = context.config
 
