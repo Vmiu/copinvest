@@ -53,7 +53,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Foundation: DocumentRecord model, Alembic migration, document_repo, vector_repo extensions, IngestResponse schema, require_role dependency
 - [x] 02-02-PLAN.md — Chunking and Embedding Services: chunk_document (gpt-4o-mini, table integrity) and embed_chunks (text-embedding-3-small, batch)
-- [ ] 02-03-PLAN.md — Document parser: docling integration for PDF, Word, Excel parsing
+- [x] 02-03-PLAN.md — Ingestion Orchestration Service: ingest_document() pipeline (docling + chunking + embedding + Qdrant + DB)
 - [ ] 02-04-PLAN.md — LLM chunking: gpt-4o-mini semantic chunking with table integrity
 
 ### Phase 3: RAG Query Pipeline
@@ -99,7 +99,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
-| 2. Document Ingestion | 2/4 | In Progress | - |
+| 2. Document Ingestion | 3/4 | In Progress | - |
 | 3. RAG Query Pipeline | 0/TBD | Not started | - |
 | 4. Telegram Bot | 0/TBD | Not started | - |
 | 5. Web Audit & Admin UI | 0/TBD | Not started | - |
