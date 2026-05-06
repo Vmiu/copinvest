@@ -6,7 +6,6 @@ from pathlib import Path
 from uuid import uuid4
 
 import structlog
-from docling.document_converter import DocumentConverter
 from openai import AsyncOpenAI
 from qdrant_client import QdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.models.document import DocumentRecord
 from backend.models.enums import SensitivityTier
 from backend.repositories import document_repo, vector_repo
-from backend.services import chunking_service, embedding_service
+from backend.services import chunking_service, document_parser, embedding_service
 
 logger = structlog.get_logger()
 
@@ -43,12 +42,6 @@ def _detect_doc_type(filename: str) -> str:
     return doc_type
 
 
-def _parse_document(file_path: str) -> str:
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
-    return result.document.export_to_markdown()
-
-
 async def ingest_document(
     db: AsyncSession,
     file_content: bytes,
@@ -56,7 +49,7 @@ async def ingest_document(
     sensitivity_tier: SensitivityTier,
     user_id: str,
     chunking_client: AsyncOpenAI,
-    embedding_client: AsyncOpenAI,
+    openrouter_client: AsyncOpenAI,
     qdrant_client: QdrantClient,
     document_id: str | None = None,
 ) -> dict:
@@ -67,12 +60,15 @@ async def ingest_document(
 
     logger.info("ingestion_started", document_id=doc_id, filename=filename, doc_type=doc_type)
 
-    # 1. Parse with docling (CPU-bound → run in thread)
+    # 1. Parse document (vision LLM for PDF, docling for everything else)
     suffix = Path(filename).suffix
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
         tmp.write(file_content)
         tmp.flush()
-        markdown = await asyncio.to_thread(_parse_document, tmp.name)
+        if doc_type == "pdf":
+            markdown = await document_parser.parse_pdf_vision(tmp.name, openrouter_client)
+        else:
+            markdown = await asyncio.to_thread(document_parser.parse_docling, tmp.name)
 
     if not markdown.strip():
         raise ValueError("Document parsed to empty content")
@@ -80,8 +76,8 @@ async def ingest_document(
     # 2. LLM chunking (DeepSeek)
     chunks = await chunking_service.chunk_document(markdown, chunking_client)
 
-    # 3. Embed chunks (OpenRouter)
-    vectors = await embedding_service.embed_chunks(chunks, embedding_client)
+    # 3. Embed chunks (sentence-transformers, client param unused but kept for API compat)
+    vectors = await embedding_service.embed_chunks(chunks, openrouter_client)
 
     # 4. Upsert new chunks first (write-then-replace for atomicity — D-12)
     allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["compliance"])
@@ -109,7 +105,7 @@ async def ingest_document(
         total_chars=total_chars,
         warnings=json.dumps(warnings) if warnings else None,
         parse_duration_ms=elapsed_ms,
-        extraction_method="docling_v2",
+        extraction_method="vision_v1",
         ingested_by=user_id,
     )
     await document_repo.upsert_document_record(db, record)
@@ -125,5 +121,5 @@ async def ingest_document(
         "total_chars": total_chars,
         "warnings": warnings,
         "parse_duration_ms": elapsed_ms,
-        "extraction_method": "docling_v2",
+        "extraction_method": "vision_v1",
     }

@@ -10,14 +10,14 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 # Application-lifetime singletons — initialised in lifespan (main.py)
 _chunking_client: AsyncOpenAI | None = None
-_embedding_client: AsyncOpenAI | None = None
+_openrouter_client: AsyncOpenAI | None = None
 _qdrant_client: QdrantClient | None = None
 
 
-def init_clients(chunking_client: AsyncOpenAI, embedding_client: AsyncOpenAI, qdrant_client: QdrantClient) -> None:
-    global _chunking_client, _embedding_client, _qdrant_client
+def init_clients(chunking_client: AsyncOpenAI, openrouter_client: AsyncOpenAI, qdrant_client: QdrantClient) -> None:
+    global _chunking_client, _openrouter_client, _qdrant_client
     _chunking_client = chunking_client
-    _embedding_client = embedding_client
+    _openrouter_client = openrouter_client
     _qdrant_client = qdrant_client
 
 
@@ -27,10 +27,15 @@ def get_chunking_client() -> AsyncOpenAI:
     return _chunking_client
 
 
+def get_openrouter_client() -> AsyncOpenAI:
+    if _openrouter_client is None:
+        raise RuntimeError("OpenRouter client not initialised")
+    return _openrouter_client
+
+
 def get_embedding_client() -> AsyncOpenAI:
-    if _embedding_client is None:
-        raise RuntimeError("Embedding client not initialised")
-    return _embedding_client
+    """Backwards-compat alias — returns openrouter client."""
+    return get_openrouter_client()
 
 
 def get_openai_client() -> AsyncOpenAI:

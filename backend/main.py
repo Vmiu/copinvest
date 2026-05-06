@@ -26,12 +26,12 @@ async def lifespan(app: FastAPI):
         api_key=settings.deepseek_api_key,
         base_url="https://api.deepseek.com/v1",
     )
-    embedding_client = AsyncOpenAI(
+    openrouter_client = AsyncOpenAI(
         api_key=settings.openroute_api_key,
         base_url="https://openrouter.ai/api/v1",
     )
     qdrant_client = get_qdrant_client()
-    init_clients(chunking_client, embedding_client, qdrant_client)
+    init_clients(chunking_client, openrouter_client, qdrant_client)
 
     try:
         setup_collection(qdrant_client)
