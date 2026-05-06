@@ -1,128 +1,88 @@
-import asyncio
-import json
-import tempfile
-import time
+import uuid
 from pathlib import Path
-from uuid import uuid4
 
 import structlog
-from docling.document_converter import DocumentConverter
-from openai import AsyncOpenAI
+from openai import OpenAI
+from pypdf import PdfReader
 from qdrant_client import QdrantClient
-from sqlalchemy.ext.asyncio import AsyncSession
+from qdrant_client.models import PointStruct
 
-from backend.models.document import DocumentRecord
-from backend.models.enums import SensitivityTier
-from backend.repositories import document_repo, vector_repo
-from backend.services import chunking_service, embedding_service
+from backend.core.config import get_settings
 
 logger = structlog.get_logger()
 
-TIER_TO_ROLES: dict[int, list[str]] = {
-    SensitivityTier.public: ["adviser", "senior_adviser", "compliance"],
-    SensitivityTier.internal: ["senior_adviser", "compliance"],
-    SensitivityTier.restricted: ["senior_adviser", "compliance"],
-    SensitivityTier.confidential: ["compliance"],
-}
+CHUNK_SIZE = 500      # characters
+CHUNK_OVERLAP = 100
+EMBEDDING_MODEL = "text-embedding-3-small"
 
-DOC_TYPE_MAP: dict[str, str] = {
-    ".pdf": "pdf",
-    ".docx": "docx",
-    ".doc": "docx",
-    ".xlsx": "xlsx",
-    ".xls": "xlsx",
-    ".csv": "csv",
+# Which roles can access each tier
+TIER_ROLES: dict[str, list[str]] = {
+    "internal": ["adviser", "senior_adviser", "compliance"],
+    "restricted": ["senior_adviser", "compliance"],
 }
 
 
-def _detect_doc_type(filename: str) -> str:
-    suffix = Path(filename).suffix.lower()
-    doc_type = DOC_TYPE_MAP.get(suffix)
-    if not doc_type:
-        raise ValueError(f"Unsupported file type: {suffix}")
-    return doc_type
+def _extract_text(pdf_path: Path) -> str:
+    reader = PdfReader(str(pdf_path))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
 
 
-def _parse_document(file_path: str) -> str:
-    converter = DocumentConverter()
-    result = converter.convert(file_path)
-    return result.document.export_to_markdown()
+def _chunk_text(text: str) -> list[str]:
+    chunks = []
+    start = 0
+    while start < len(text):
+        end = start + CHUNK_SIZE
+        chunks.append(text[start:end].strip())
+        start += CHUNK_SIZE - CHUNK_OVERLAP
+    return [c for c in chunks if len(c) > 50]  # drop tiny chunks
 
 
-async def ingest_document(
-    db: AsyncSession,
-    file_content: bytes,
-    filename: str,
-    sensitivity_tier: SensitivityTier,
-    user_id: str,
-    openai_client: AsyncOpenAI,
-    qdrant_client: QdrantClient,
-    document_id: str | None = None,
+def _embed(texts: list[str], client: OpenAI) -> list[list[float]]:
+    response = client.embeddings.create(model=EMBEDDING_MODEL, input=texts)
+    return [item.embedding for item in response.data]
+
+
+def ingest_document(
+    pdf_path: Path,
+    sensitivity_tier: str,
+    qdrant: QdrantClient,
+    openai_client: OpenAI,
+    collection: str | None = None,
 ) -> dict:
-    doc_id = document_id or str(uuid4())
-    doc_type = _detect_doc_type(filename)
-    warnings: list[str] = []
-    start = time.monotonic()
+    settings = get_settings()
+    collection = collection or settings.qdrant_collection
+    allowed_roles = TIER_ROLES[sensitivity_tier]
+    tier_int = 2 if sensitivity_tier == "internal" else 3  # maps to SensitivityTier enum
 
-    logger.info("ingestion_started", document_id=doc_id, filename=filename, doc_type=doc_type)
+    logger.info("ingesting_document", path=str(pdf_path), tier=sensitivity_tier)
 
-    # 1. Parse with docling (CPU-bound → run in thread)
-    suffix = Path(filename).suffix
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
-        tmp.write(file_content)
-        tmp.flush()
-        markdown = await asyncio.to_thread(_parse_document, tmp.name)
+    text = _extract_text(pdf_path)
+    chunks = _chunk_text(text)
 
-    if not markdown.strip():
-        raise ValueError("Document parsed to empty content")
+    logger.info("chunks_created", count=len(chunks), source=pdf_path.name)
 
-    # 2. LLM chunking
-    chunks = await chunking_service.chunk_document(markdown, openai_client)
+    # Embed in batches of 100
+    all_embeddings = []
+    for i in range(0, len(chunks), 100):
+        batch = chunks[i : i + 100]
+        all_embeddings.extend(_embed(batch, openai_client))
 
-    # 3. Embed chunks
-    vectors = await embedding_service.embed_chunks(chunks, openai_client)
+    points = [
+        PointStruct(
+            id=str(uuid.uuid4()),
+            vector=embedding,
+            payload={
+                "source": pdf_path.name,
+                "sensitivity_tier": tier_int,
+                "allowed_roles": allowed_roles,
+                "chunk_index": idx,
+                "text": chunk,
+            },
+        )
+        for idx, (chunk, embedding) in enumerate(zip(chunks, all_embeddings))
+    ]
 
-    # 4. Upsert new chunks first (write-then-replace for atomicity — D-12)
-    allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["compliance"])
-    payload_base = {
-        "source_id": doc_id,
-        "doc_type": doc_type,
-        "sensitivity_tier": sensitivity_tier.value,
-        "allowed_roles": allowed_roles,
-    }
-    chunk_count, new_point_ids = vector_repo.upsert_chunks(qdrant_client, chunks, vectors, payload_base)
+    qdrant.upsert(collection_name=collection, points=points)
 
-    # 4b. Only after new chunks are confirmed written, remove old ones
-    vector_repo.delete_by_source_except_new(qdrant_client, doc_id, new_point_ids)
-
-    # 5. Record in document registry (D-16)
-    total_chars = sum(len(c) for c in chunks)
-    elapsed_ms = int((time.monotonic() - start) * 1000)
-
-    record = DocumentRecord(
-        document_id=doc_id,
-        filename=filename,
-        doc_type=doc_type,
-        sensitivity_tier=sensitivity_tier.value,
-        chunk_count=chunk_count,
-        total_chars=total_chars,
-        warnings=json.dumps(warnings) if warnings else None,
-        parse_duration_ms=elapsed_ms,
-        extraction_method="docling_v2",
-        ingested_by=user_id,
-    )
-    await document_repo.upsert_document_record(db, record)
-
-    logger.info("ingestion_complete", document_id=doc_id, chunks=chunk_count, duration_ms=elapsed_ms)
-
-    return {
-        "document_id": doc_id,
-        "filename": filename,
-        "doc_type": doc_type,
-        "sensitivity_tier": sensitivity_tier.value,
-        "chunk_count": chunk_count,
-        "total_chars": total_chars,
-        "warnings": warnings,
-        "parse_duration_ms": elapsed_ms,
-        "extraction_method": "docling_v2",
-    }
+    logger.info("ingestion_complete", source=pdf_path.name, points=len(points))
+    return {"source": pdf_path.name, "chunks": len(points), "tier": sensitivity_tier}
