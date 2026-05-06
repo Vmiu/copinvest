@@ -22,7 +22,7 @@ async def upsert_document_record(db: AsyncSession, record: DocumentRecord) -> Do
         existing.warnings = record.warnings
         existing.parse_duration_ms = record.parse_duration_ms
         existing.extraction_method = record.extraction_method
-        existing.ingested_at = record.ingested_at
+        # Do not overwrite ingested_at — preserve original ingestion timestamp
         existing.ingested_by = record.ingested_by
         await db.flush()
         return existing
