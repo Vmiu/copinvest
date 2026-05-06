@@ -12,6 +12,8 @@ logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/v1", tags=["ingest"])
 
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024  # 50 MB
+
 
 @router.post("/ingest", response_model=IngestResponse, status_code=201)
 async def ingest_document(
@@ -21,7 +23,12 @@ async def ingest_document(
     current_user: dict = Depends(require_role("compliance")),
     db: AsyncSession = Depends(get_db),
 ):
-    content = await file.read()
+    content = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File exceeds maximum size of {MAX_UPLOAD_BYTES // (1024 * 1024)} MB",
+        )
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
 
