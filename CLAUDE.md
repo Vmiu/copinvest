@@ -110,7 +110,13 @@ A GenAI assistant for investment advisers in Hong Kong that uses retrieval-augme
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
-Conventions not yet established. Will populate as patterns emerge during development.
+### Python Environment
+- **Always use `uv`** for Python environment management. Never use `pip`, `python -m venv`, or bare `python`.
+- Create venv: `uv venv`
+- Install deps: `uv pip install -e ".[dev]"`
+- Run Python code: `uv run python ...`
+- Run tests: `uv run pytest tests/ -q`
+- Run any Python tool: `uv run <tool>` (e.g., `uv run alembic`, `uv run uvicorn`)
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->

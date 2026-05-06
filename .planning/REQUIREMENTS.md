@@ -7,14 +7,14 @@
 
 ### Document Ingestion
 
-- [ ] **INGEST-01**: System can parse PDF documents and extract text with table structure preserved
-- [ ] **INGEST-02**: System can parse Word (.docx) documents and extract text with formatting preserved
-- [ ] **INGEST-03**: System can parse Excel/CSV files with column headers preserved per row
-- [ ] **INGEST-04**: Admin can assign a sensitivity tier (Public/Internal/Restricted/Confidential) to each document at ingestion
-- [ ] **INGEST-05**: Each chunk is tagged with source_id, doc_type, sensitivity_tier, and allowed_roles metadata
-- [ ] **INGEST-06**: Documents are chunked using semantic/structural boundaries (section headers, paragraphs) not fixed token counts
-- [ ] **INGEST-07**: Financial tables are kept as complete units during chunking, not split across chunks
-- [ ] **INGEST-08**: Ingestion logs parsing quality metrics (character count, warnings, extraction method) per document
+- [x] **INGEST-01**: System can parse PDF documents and extract text with table structure preserved
+- [x] **INGEST-02**: System can parse Word (.docx) documents and extract text with formatting preserved
+- [x] **INGEST-03**: System can parse Excel/CSV files with column headers preserved per row
+- [x] **INGEST-04**: Admin can assign a sensitivity tier (Public/Internal/Restricted/Confidential) to each document at ingestion
+- [x] **INGEST-05**: Each chunk is tagged with source_id, doc_type, sensitivity_tier, and allowed_roles metadata
+- [x] **INGEST-06**: Documents are chunked using semantic/structural boundaries (section headers, paragraphs) not fixed token counts
+- [x] **INGEST-07**: Financial tables are kept as complete units during chunking, not split across chunks
+- [x] **INGEST-08**: Ingestion logs parsing quality metrics (character count, warnings, extraction method) per document
 
 ### RAG Query
 
@@ -110,14 +110,14 @@
 | AUDIT-03 | Phase 1 | Complete (01-03) |
 | AUDIT-04 | Phase 1 | Complete (01-03) |
 | AUDIT-05 | Phase 1 | Complete (01-03) |
-| INGEST-01 | Phase 2 | Pending |
-| INGEST-02 | Phase 2 | Pending |
-| INGEST-03 | Phase 2 | Pending |
-| INGEST-04 | Phase 2 | Pending |
-| INGEST-05 | Phase 2 | Pending |
-| INGEST-06 | Phase 2 | Pending |
-| INGEST-07 | Phase 2 | Pending |
-| INGEST-08 | Phase 2 | Pending |
+| INGEST-01 | Phase 2 | Complete (02-03) |
+| INGEST-02 | Phase 2 | Complete (02-03) |
+| INGEST-03 | Phase 2 | Complete (02-03) |
+| INGEST-04 | Phase 2 | Complete (02-01) |
+| INGEST-05 | Phase 2 | Complete (02-01) |
+| INGEST-06 | Phase 2 | Complete (02-02) |
+| INGEST-07 | Phase 2 | Complete (02-02) |
+| INGEST-08 | Phase 2 | Complete (02-01) |
 | RAG-01 | Phase 3 | Pending |
 | RAG-02 | Phase 3 | Pending |
 | RAG-03 | Phase 3 | Pending |
