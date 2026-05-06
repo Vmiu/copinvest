@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 executing — Wave 2
-last_updated: "2026-05-06T11:42:00.000Z"
-last_activity: "2026-05-06 — Phase 2 Plan 03 complete: Ingestion Orchestration Service"
+stopped_at: Phase 2 complete — Wave 3
+last_updated: "2026-05-06T12:00:00.000Z"
+last_activity: "2026-05-06 — Phase 2 Plan 04 complete: API Endpoint and Integration Tests"
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 4
-  completed_plans: 5
+  completed_plans: 6
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-29)
 
 **Core value:** Advisers can ask a question and get an accurate, source-attributed answer from approved internal documents — with every interaction fully auditable.
-**Current focus:** Phase 2 Wave 2 — 02-03 complete, continuing to 02-04
+**Current focus:** Phase 2 complete — ready for Phase 3 (RAG Query Pipeline)
 
 ## Current Position
 
-Phase: 2 of 5 (Document Ingestion)
-Plan: 3 of 4 in current phase
-Status: Executing Wave 2
-Last activity: 2026-05-06 — Phase 2 Plan 03 complete: Ingestion Orchestration Service
+Phase: 2 of 5 (Document Ingestion) — COMPLETE
+Plan: 4 of 4 in current phase
+Status: Phase 2 complete, advancing to Phase 3
+Last activity: 2026-05-06 — Phase 2 Plan 04 complete: API Endpoint and Integration Tests
 
 Progress: [████░░░░░░] 20%
 
@@ -36,20 +36,20 @@ Progress: [████░░░░░░] 20%
 
 **Velocity:**
 
-- Total plans completed: 5
-- Average duration: 4.4min
-- Total execution time: 0.4 hours
+- Total plans completed: 6
+- Average duration: 4.5min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-data-foundation | 4 | 17min | 4.3min |
-| 02-document-ingestion | 3 | 22min | 7min |
+| 02-document-ingestion | 4 | 28min | 7min |
 
 **Recent Trend:**
 
-- Last 5 plans: 5min, 6min, 3min, 3min, 15min
+- Last 5 plans: 6min, 3min, 3min, 15min, 6min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -82,6 +82,9 @@ Recent decisions affecting current work:
 - 02-03: TIER_TO_ROLES maps SensitivityTier members to allowed_roles lists — Qdrant payload enforces RBAC pre-filtering at ingestion time
 - 02-03: delete_by_source before upsert — idempotent re-ingestion replaces existing chunks (D-12)
 - 02-03: docling parse runs in asyncio.to_thread() — CPU-bound operation never blocks event loop
+- 02-04: current_user["user_id"] not "sub" — get_current_user() returns {"user_id": ..., "role": ...} not JWT claims directly
+- 02-04: setup_collection() required in qdrant_memory fixture — in-memory Qdrant starts with no collections
+- 02-04: ingested_at excluded from upsert update path — SQLAlchemy lambda default only fires on INSERT, not on Python object copy
 
 ### Pending Todos
 
@@ -100,6 +103,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T11:42:00.000Z
-Stopped at: Phase 2 Plan 03 complete — Ingestion Orchestration Service
-Resume file: .planning/phases/02-document-ingestion/02-04-PLAN.md
+Last session: 2026-05-06T12:00:00.000Z
+Stopped at: Phase 2 Plan 04 complete — API Endpoint and Integration Tests
+Resume file: .planning/phases/03-rag-query-pipeline/03-01-PLAN.md

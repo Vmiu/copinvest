@@ -13,7 +13,7 @@ Build a compliance-aware RAG assistant for HK investment advisers in five phases
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Data Foundation** - Auth, RBAC, audit schema, and Qdrant/PostgreSQL infrastructure (completed 2026-04-29)
-- [ ] **Phase 2: Document Ingestion** - Parse PDF/Word/Excel, chunk, tag metadata, embed into Qdrant
+- [x] **Phase 2: Document Ingestion** - Parse PDF/Word/Excel, chunk, tag metadata, embed into Qdrant (completed 2026-05-06)
 - [ ] **Phase 3: RAG Query Pipeline** - Filtered retrieval, reranking, generation, audit logging
 - [ ] **Phase 4: Telegram Bot** - Primary adviser interface: Q&A with source citations, draft review flow, action tracking
 - [ ] **Phase 5: Web Audit & Admin UI** - Audit log viewer, trace inspector, document registry, admin ingestion UI
@@ -54,7 +54,7 @@ Plans:
 - [x] 02-01-PLAN.md — Foundation: DocumentRecord model, Alembic migration, document_repo, vector_repo extensions, IngestResponse schema, require_role dependency
 - [x] 02-02-PLAN.md — Chunking and Embedding Services: chunk_document (gpt-4o-mini, table integrity) and embed_chunks (text-embedding-3-small, batch)
 - [x] 02-03-PLAN.md — Ingestion Orchestration Service: ingest_document() pipeline (docling + chunking + embedding + Qdrant + DB)
-- [ ] 02-04-PLAN.md — LLM chunking: gpt-4o-mini semantic chunking with table integrity
+- [x] 02-04-PLAN.md — API Endpoint and Integration Tests: POST /api/v1/ingest, compliance RBAC, 11 integration tests
 
 ### Phase 3: RAG Query Pipeline
 **Goal**: Users can ask natural language questions and receive accurate, source-attributed answers drawn only from approved documents, with every interaction audited
@@ -99,7 +99,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
-| 2. Document Ingestion | 3/4 | In Progress | - |
+| 2. Document Ingestion | 4/4 | Complete | 2026-05-06 |
 | 3. RAG Query Pipeline | 0/TBD | Not started | - |
 | 4. Telegram Bot | 0/TBD | Not started | - |
 | 5. Web Audit & Admin UI | 0/TBD | Not started | - |
