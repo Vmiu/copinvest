@@ -7,6 +7,7 @@ from backend.core.database import engine
 from backend.models.base import Base
 from backend.repositories.vector_repo import get_qdrant_client, setup_collection
 from backend.routers.auth import router as auth_router
+from backend.routers.ingest import router as ingest_router
 
 logger = structlog.get_logger()
 
@@ -31,6 +32,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CopInvest", lifespan=lifespan)
 app.include_router(auth_router)
+app.include_router(ingest_router)
 
 
 @app.get("/health")
