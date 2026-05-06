@@ -1,7 +1,7 @@
 """Integration tests for POST /api/v1/ingest endpoint — covers all INGEST requirements."""
 
 import io
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 import pytest_asyncio
@@ -10,7 +10,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 from backend.core.database import get_db
-from backend.core.dependencies import get_chunking_client, get_embedding_client, get_qdrant_client
+from backend.core.dependencies import get_chunking_client, get_openrouter_client, get_qdrant_client
 from backend.core.security import hash_password
 from backend.main import app
 from backend.models.base import Base
@@ -83,13 +83,13 @@ async def ingest_client(db_session_ingest, qdrant_memory):
     def override_get_chunking():
         return MagicMock()
 
-    def override_get_embedding():
+    def override_get_openrouter():
         return MagicMock()
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_qdrant_client] = override_get_qdrant
     app.dependency_overrides[get_chunking_client] = override_get_chunking
-    app.dependency_overrides[get_embedding_client] = override_get_embedding
+    app.dependency_overrides[get_openrouter_client] = override_get_openrouter
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
@@ -127,7 +127,13 @@ def _ingest_patches():
     """Return a list of context managers that mock the heavy dependencies."""
     return [
         patch(
-            "backend.services.ingestion_service._parse_document",
+            "backend.services.document_parser.parse_pdf_vision",
+            new_callable=AsyncMock,
+            return_value=_MOCK_MARKDOWN,
+        ),
+        patch(
+            "backend.services.document_parser.parse_docling",
+            new_callable=Mock,
             return_value=_MOCK_MARKDOWN,
         ),
         patch(
@@ -153,7 +159,11 @@ async def test_ingest_pdf_success(ingest_client, compliance_user, qdrant_memory)
 
     pdf_content = b"%PDF-1.4 minimal test pdf content"
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -188,7 +198,11 @@ async def test_ingest_docx_success(ingest_client, compliance_user, qdrant_memory
 
     docx_content = b"PK\x03\x04 minimal docx content"
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -220,7 +234,11 @@ async def test_ingest_csv_success(ingest_client, compliance_user, qdrant_memory)
 
     csv_content = b"name,value\nApple Inc,150.00\nGoogle,2800.00"
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -269,7 +287,11 @@ async def test_ingest_sensitivity_tier_stored(ingest_client, compliance_user, qd
     token = await _get_compliance_token(ingest_client)
 
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -317,7 +339,11 @@ async def test_ingest_chunks_have_metadata(ingest_client, compliance_user, qdran
     token = await _get_compliance_token(ingest_client)
 
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -369,7 +395,11 @@ async def test_reingest_replaces_chunks(ingest_client, compliance_user, qdrant_m
     first_vectors = [[0.1] * 768, [0.2] * 768, [0.3] * 768]
 
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -394,7 +424,11 @@ async def test_reingest_replaces_chunks(ingest_client, compliance_user, qdrant_m
     second_vectors = [[0.4] * 768, [0.5] * 768]
 
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -436,7 +470,11 @@ async def test_ingest_document_id_optional(ingest_client, compliance_user, qdran
     token = await _get_compliance_token(ingest_client)
 
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
@@ -473,7 +511,11 @@ async def test_ingest_quality_metrics(ingest_client, compliance_user, qdrant_mem
     token = await _get_compliance_token(ingest_client)
 
     with patch(
-        "backend.services.ingestion_service._parse_document",
+        "backend.services.document_parser.parse_pdf_vision",
+        new_callable=AsyncMock,
+        return_value=_MOCK_MARKDOWN,
+    ), patch(
+        "backend.services.document_parser.parse_docling",
         return_value=_MOCK_MARKDOWN,
     ), patch(
         "backend.services.chunking_service.chunk_document",
