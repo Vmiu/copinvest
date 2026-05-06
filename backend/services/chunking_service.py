@@ -1,5 +1,7 @@
+import re
+
 import structlog
-from openai import AsyncOpenAI
+from openai import APIConnectionError, APIError, AsyncOpenAI, RateLimitError
 
 logger = structlog.get_logger()
 
@@ -30,13 +32,18 @@ async def chunk_document(markdown: str, client: AsyncOpenAI) -> list[str]:
                 ],
                 temperature=0.0,
             )
-            raw = response.choices[0].message.content
-            chunks = [c.strip() for c in raw.split("\n---\n") if c.strip()]
+            raw = response.choices[0].message.content.strip()
+            # Normalize line endings, then split on any line that is exactly "---"
+            normalized = raw.replace("\r\n", "\n")
+            parts = re.split(r'\n?^---$\n?', normalized, flags=re.MULTILINE)
+            chunks = [c.strip() for c in parts if c.strip()]
             if not chunks:
                 raise ValueError("LLM returned no chunks")
             logger.info("chunking_complete", chunk_count=len(chunks), attempt=attempt + 1)
             return chunks
-        except Exception as e:
+        except ValueError:
+            raise  # non-transient: propagate immediately, no retry
+        except (APIConnectionError, RateLimitError, APIError) as e:
             last_error = e
             logger.warning("chunking_retry", attempt=attempt + 1, error=str(e))
 
