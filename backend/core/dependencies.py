@@ -12,7 +12,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         payload = decode_access_token(token)
         user_id: str = payload.get("sub")
         role: str = payload.get("role")
-        if user_id is None:
+        if user_id is None or role is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
