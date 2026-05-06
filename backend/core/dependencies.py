@@ -1,10 +1,34 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
+from openai import AsyncOpenAI
+from qdrant_client import QdrantClient
 
 from backend.core.security import decode_access_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
+
+# Application-lifetime singletons — initialised in lifespan (main.py)
+_openai_client: AsyncOpenAI | None = None
+_qdrant_client: QdrantClient | None = None
+
+
+def init_clients(openai_client: AsyncOpenAI, qdrant_client: QdrantClient) -> None:
+    global _openai_client, _qdrant_client
+    _openai_client = openai_client
+    _qdrant_client = qdrant_client
+
+
+def get_openai_client() -> AsyncOpenAI:
+    if _openai_client is None:
+        raise RuntimeError("OpenAI client not initialised")
+    return _openai_client
+
+
+def get_qdrant_client() -> QdrantClient:
+    if _qdrant_client is None:
+        raise RuntimeError("Qdrant client not initialised")
+    return _qdrant_client
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
