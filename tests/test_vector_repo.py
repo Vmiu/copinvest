@@ -14,7 +14,7 @@ from backend.repositories.vector_repo import (
 random.seed(42)
 
 
-def _random_vector(dim: int = 768) -> list[float]:
+def _random_vector(dim: int = 1024) -> list[float]:
     return [random.random() for _ in range(dim)]
 
 

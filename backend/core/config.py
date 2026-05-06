@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""  # Unused — kept for backwards compat
     deepseek_api_key: str
     openroute_api_key: str
+    voyage_api_key: str
     access_token_expire_minutes: int = 1440  # 24h
     debug: bool = False
 

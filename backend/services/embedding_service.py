@@ -1,32 +1,44 @@
-import asyncio
-
+import httpx
 import structlog
 from openai import AsyncOpenAI
-from sentence_transformers import SentenceTransformer
+
+from backend.core.config import get_settings
 
 logger = structlog.get_logger()
 
-# Loaded once at module import — kept in memory for the process lifetime
-_MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
-_model: SentenceTransformer | None = None
-
-
-def _get_model() -> SentenceTransformer:
-    global _model
-    if _model is None:
-        logger.info("embedding_model_loading", model=_MODEL_NAME)
-        _model = SentenceTransformer(_MODEL_NAME)
-    return _model
+VOYAGE_MODEL = "voyage-3"
+VOYAGE_EMBED_URL = "https://api.voyageai.com/v1/embeddings"
+EMBEDDING_DIMENSIONS = 1024
 
 
 async def embed_chunks(chunks: list[str], client: AsyncOpenAI) -> list[list[float]]:
-    """Embed chunks locally using sentence-transformers (client param kept for API compat)."""
+    """Embed chunks using Voyage AI (client param kept for API compat, unused)."""
     if not chunks:
         raise ValueError("embed_chunks called with empty chunk list")
-    model = _get_model()
-    # SentenceTransformer.encode is CPU-bound — run in thread to avoid blocking event loop
-    vectors = await asyncio.to_thread(
-        lambda: model.encode(chunks, show_progress_bar=False).tolist()
+
+    settings = get_settings()
+    async with httpx.AsyncClient(timeout=60) as http:
+        resp = await http.post(
+            VOYAGE_EMBED_URL,
+            headers={
+                "Authorization": f"Bearer {settings.voyage_api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": VOYAGE_MODEL,
+                "input": chunks,
+                "input_type": "document",
+            },
+        )
+        resp.raise_for_status()
+
+    data = resp.json()
+    # Voyage returns items sorted by index
+    vectors = [item["embedding"] for item in sorted(data["data"], key=lambda x: x["index"])]
+    logger.info(
+        "embedding_complete",
+        chunk_count=len(chunks),
+        dimensions=len(vectors[0]) if vectors else 0,
+        tokens_used=data.get("usage", {}).get("total_tokens"),
     )
-    logger.info("embedding_complete", chunk_count=len(chunks), dimensions=len(vectors[0]) if vectors else 0)
     return vectors

@@ -28,7 +28,7 @@ def setup_collection(
     if not client.collection_exists(name):
         client.create_collection(
             collection_name=name,
-            vectors_config=VectorParams(size=768, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
         )
 
     # Ensure payload indexes exist (idempotent)

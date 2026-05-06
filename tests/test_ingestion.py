@@ -119,7 +119,7 @@ async def _get_adviser_token(client: AsyncClient) -> str:
 
 # Shared mock data
 _MOCK_CHUNKS = ["Chunk 1 content about investments", "Chunk 2 content about compliance"]
-_MOCK_VECTORS = [[0.1] * 768, [0.2] * 768]
+_MOCK_VECTORS = [[0.1] * 1024, [0.2] * 1024]
 _MOCK_MARKDOWN = "# Sample Document\n\nThis is test content.\n\n---\n\nMore test content."
 
 
@@ -392,7 +392,7 @@ async def test_reingest_replaces_chunks(ingest_client, compliance_user, qdrant_m
     doc_id = "test-reingest-doc"
 
     first_chunks = ["First ingestion chunk A", "First ingestion chunk B", "First ingestion chunk C"]
-    first_vectors = [[0.1] * 768, [0.2] * 768, [0.3] * 768]
+    first_vectors = [[0.1] * 1024, [0.2] * 1024, [0.3] * 1024]
 
     with patch(
         "backend.services.document_parser.parse_pdf_vision",
@@ -421,7 +421,7 @@ async def test_reingest_replaces_chunks(ingest_client, compliance_user, qdrant_m
 
     # Second ingestion with same document_id — 2 chunks
     second_chunks = ["Second ingestion chunk X", "Second ingestion chunk Y"]
-    second_vectors = [[0.4] * 768, [0.5] * 768]
+    second_vectors = [[0.4] * 1024, [0.5] * 1024]
 
     with patch(
         "backend.services.document_parser.parse_pdf_vision",
