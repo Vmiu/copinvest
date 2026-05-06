@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 executing — Wave 1
-last_updated: "2026-05-06T19:45:00.000Z"
-last_activity: "2026-05-06 — Phase 2 Plan 01 complete: Foundation — Models, Migration, Repos, Config, Schemas"
+stopped_at: Phase 2 executing — Wave 2
+last_updated: "2026-05-06T11:37:00.000Z"
+last_activity: "2026-05-06 — Phase 2 Plan 02 complete: Chunking and Embedding Services"
 progress:
   total_phases: 5
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-29)
 
 **Core value:** Advisers can ask a question and get an accurate, source-attributed answer from approved internal documents — with every interaction fully auditable.
-**Current focus:** Phase 2 Wave 1 — 02-01 complete, continuing to 02-02
+**Current focus:** Phase 2 Wave 2 — 02-02 complete, continuing to 02-03
 
 ## Current Position
 
 Phase: 2 of 5 (Document Ingestion)
-Plan: 1 of 4 in current phase
-Status: Executing Wave 1
-Last activity: 2026-05-06 — Phase 2 Plan 01 complete: Foundation
+Plan: 2 of 4 in current phase
+Status: Executing Wave 2
+Last activity: 2026-05-06 — Phase 2 Plan 02 complete: Chunking and Embedding Services
 
 Progress: [████░░░░░░] 20%
 
@@ -45,7 +45,7 @@ Progress: [████░░░░░░] 20%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-data-foundation | 4 | 17min | 4.3min |
-| 02-document-ingestion | 1 | 15min | 15min |
+| 02-document-ingestion | 2 | 20min | 10min |
 
 **Recent Trend:**
 
@@ -77,6 +77,8 @@ Recent decisions affecting current work:
 - 02-01: openai_api_key has no default — forces explicit env config, never logged (T-02-05)
 - 02-01: upsert_chunks generates UUID point IDs — avoids ID conflicts across re-ingestion cycles
 - 02-01: require_role(*roles) factory pattern for role-based endpoint protection
+- 02-02: AsyncOpenAI client injected as parameter in chunking/embedding services — no get_settings() in service modules (testability, D-01)
+- 02-02: openai>=1.68.0 added to pyproject.toml — was missing from declared dependencies
 
 ### Pending Todos
 
@@ -95,6 +97,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-06T19:45:00.000Z
-Stopped at: Phase 2 Plan 01 complete — Foundation
-Resume file: .planning/phases/02-document-ingestion/02-02-PLAN.md
+Last session: 2026-05-06T11:37:00.000Z
+Stopped at: Phase 2 Plan 02 complete — Chunking and Embedding Services
+Resume file: .planning/phases/02-document-ingestion/02-03-PLAN.md
