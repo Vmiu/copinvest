@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     qdrant_port: int = 6333
     qdrant_collection: str = "documents"
     secret_key: str  # No default -- forces explicit config
-    openai_api_key: str
+    openai_api_key: str = ""  # Unused — kept for backwards compat
+    deepseek_api_key: str
+    openroute_api_key: str
     access_token_expire_minutes: int = 1440  # 24h
     debug: bool = False
 

@@ -5,7 +5,7 @@ from qdrant_client import QdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.core.database import get_db
-from backend.core.dependencies import get_openai_client, get_qdrant_client, require_role
+from backend.core.dependencies import get_chunking_client, get_embedding_client, get_qdrant_client, require_role
 from backend.models.enums import SensitivityTier
 from backend.schemas.ingest import IngestResponse
 from backend.services import ingestion_service
@@ -24,7 +24,8 @@ async def ingest_document(
     document_id: str | None = Form(None),
     current_user: dict = Depends(require_role("compliance")),
     db: AsyncSession = Depends(get_db),
-    openai_client: AsyncOpenAI = Depends(get_openai_client),
+    chunking_client: AsyncOpenAI = Depends(get_chunking_client),
+    embedding_client: AsyncOpenAI = Depends(get_embedding_client),
     qdrant_client: QdrantClient = Depends(get_qdrant_client),
 ):
     content = await file.read(MAX_UPLOAD_BYTES + 1)
@@ -43,7 +44,8 @@ async def ingest_document(
             filename=file.filename or "unknown",
             sensitivity_tier=sensitivity_tier,
             user_id=current_user["user_id"],
-            openai_client=openai_client,
+            chunking_client=chunking_client,
+            embedding_client=embedding_client,
             qdrant_client=qdrant_client,
             document_id=document_id,
         )

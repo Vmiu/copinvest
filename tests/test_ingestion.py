@@ -10,7 +10,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 from backend.core.database import get_db
-from backend.core.dependencies import get_openai_client, get_qdrant_client
+from backend.core.dependencies import get_chunking_client, get_embedding_client, get_qdrant_client
 from backend.core.security import hash_password
 from backend.main import app
 from backend.models.base import Base
@@ -80,12 +80,16 @@ async def ingest_client(db_session_ingest, qdrant_memory):
     def override_get_qdrant():
         return qdrant_memory
 
-    def override_get_openai():
+    def override_get_chunking():
+        return MagicMock()
+
+    def override_get_embedding():
         return MagicMock()
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_qdrant_client] = override_get_qdrant
-    app.dependency_overrides[get_openai_client] = override_get_openai
+    app.dependency_overrides[get_chunking_client] = override_get_chunking
+    app.dependency_overrides[get_embedding_client] = override_get_embedding
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c

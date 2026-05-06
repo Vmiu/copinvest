@@ -55,7 +55,8 @@ async def ingest_document(
     filename: str,
     sensitivity_tier: SensitivityTier,
     user_id: str,
-    openai_client: AsyncOpenAI,
+    chunking_client: AsyncOpenAI,
+    embedding_client: AsyncOpenAI,
     qdrant_client: QdrantClient,
     document_id: str | None = None,
 ) -> dict:
@@ -76,11 +77,11 @@ async def ingest_document(
     if not markdown.strip():
         raise ValueError("Document parsed to empty content")
 
-    # 2. LLM chunking
-    chunks = await chunking_service.chunk_document(markdown, openai_client)
+    # 2. LLM chunking (DeepSeek)
+    chunks = await chunking_service.chunk_document(markdown, chunking_client)
 
-    # 3. Embed chunks
-    vectors = await embedding_service.embed_chunks(chunks, openai_client)
+    # 3. Embed chunks (OpenRouter)
+    vectors = await embedding_service.embed_chunks(chunks, embedding_client)
 
     # 4. Upsert new chunks first (write-then-replace for atomicity — D-12)
     allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["compliance"])

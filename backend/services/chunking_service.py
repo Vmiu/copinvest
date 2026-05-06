@@ -25,7 +25,7 @@ async def chunk_document(markdown: str, client: AsyncOpenAI) -> list[str]:
     for attempt in range(MAX_ATTEMPTS):
         try:
             response = await client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": CHUNKING_PROMPT},
                     {"role": "user", "content": markdown},

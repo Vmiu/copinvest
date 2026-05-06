@@ -9,20 +9,33 @@ from backend.core.security import decode_access_token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 # Application-lifetime singletons — initialised in lifespan (main.py)
-_openai_client: AsyncOpenAI | None = None
+_chunking_client: AsyncOpenAI | None = None
+_embedding_client: AsyncOpenAI | None = None
 _qdrant_client: QdrantClient | None = None
 
 
-def init_clients(openai_client: AsyncOpenAI, qdrant_client: QdrantClient) -> None:
-    global _openai_client, _qdrant_client
-    _openai_client = openai_client
+def init_clients(chunking_client: AsyncOpenAI, embedding_client: AsyncOpenAI, qdrant_client: QdrantClient) -> None:
+    global _chunking_client, _embedding_client, _qdrant_client
+    _chunking_client = chunking_client
+    _embedding_client = embedding_client
     _qdrant_client = qdrant_client
 
 
+def get_chunking_client() -> AsyncOpenAI:
+    if _chunking_client is None:
+        raise RuntimeError("Chunking client not initialised")
+    return _chunking_client
+
+
+def get_embedding_client() -> AsyncOpenAI:
+    if _embedding_client is None:
+        raise RuntimeError("Embedding client not initialised")
+    return _embedding_client
+
+
 def get_openai_client() -> AsyncOpenAI:
-    if _openai_client is None:
-        raise RuntimeError("OpenAI client not initialised")
-    return _openai_client
+    """Backwards-compat alias — returns chunking client."""
+    return get_chunking_client()
 
 
 def get_qdrant_client() -> QdrantClient:
