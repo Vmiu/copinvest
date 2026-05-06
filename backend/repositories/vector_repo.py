@@ -1,3 +1,5 @@
+import uuid
+
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -5,6 +7,7 @@ from qdrant_client.models import (
     Filter,
     MatchValue,
     PayloadSchemaType,
+    PointStruct,
     VectorParams,
 )
 
@@ -39,6 +42,11 @@ def setup_collection(
         field_name="sensitivity_tier",
         field_schema=PayloadSchemaType.INTEGER,
     )
+    client.create_payload_index(
+        collection_name=name,
+        field_name="source_id",
+        field_schema=PayloadSchemaType.KEYWORD,
+    )
 
 
 def query_with_rbac(
@@ -63,4 +71,40 @@ def query_with_rbac(
             ]
         ),
         limit=limit,
+    )
+
+
+def upsert_chunks(
+    client: QdrantClient,
+    chunks: list[str],
+    vectors: list[list[float]],
+    payload_base: dict,
+    collection: str | None = None,
+) -> int:
+    settings = get_settings()
+    name = collection or settings.qdrant_collection
+    points = [
+        PointStruct(
+            id=str(uuid.uuid4()),
+            vector=vector,
+            payload={**payload_base, "chunk_index": i, "text": chunk},
+        )
+        for i, (chunk, vector) in enumerate(zip(chunks, vectors))
+    ]
+    client.upsert(collection_name=name, points=points)
+    return len(points)
+
+
+def delete_by_source(
+    client: QdrantClient,
+    source_id: str,
+    collection: str | None = None,
+) -> None:
+    settings = get_settings()
+    name = collection or settings.qdrant_collection
+    client.delete(
+        collection_name=name,
+        points_selector=Filter(
+            must=[FieldCondition(key="source_id", match=MatchValue(value=source_id))]
+        ),
     )
