@@ -84,11 +84,8 @@ async def ingest_document(
     # 4. Embed chunks
     vectors = await embedding_service.embed_chunks(chunks, openai_client)
 
-    # 5. Delete existing chunks for re-ingestion (D-12)
+    # 5. Upsert new chunks first (write-then-replace for atomicity — D-12)
     qdrant = vector_repo.get_qdrant_client()
-    vector_repo.delete_by_source(qdrant, doc_id)
-
-    # 6. Upsert new chunks with metadata (D-05)
     allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["compliance"])
     payload_base = {
         "source_id": doc_id,
@@ -96,9 +93,12 @@ async def ingest_document(
         "sensitivity_tier": sensitivity_tier.value,
         "allowed_roles": allowed_roles,
     }
-    chunk_count = vector_repo.upsert_chunks(qdrant, chunks, vectors, payload_base)
+    chunk_count, new_point_ids = vector_repo.upsert_chunks(qdrant, chunks, vectors, payload_base)
 
-    # 7. Record in document registry (D-16)
+    # 5b. Only after new chunks are confirmed written, remove old ones
+    vector_repo.delete_by_source_except_new(qdrant, doc_id, new_point_ids)
+
+    # 6. Record in document registry (D-16)
     total_chars = sum(len(c) for c in chunks)
     elapsed_ms = int((time.monotonic() - start) * 1000)
 
