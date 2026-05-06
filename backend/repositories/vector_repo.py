@@ -80,19 +80,21 @@ def upsert_chunks(
     vectors: list[list[float]],
     payload_base: dict,
     collection: str | None = None,
-) -> int:
+) -> tuple[int, list[str]]:
+    """Upsert chunks and return (count, list_of_point_ids)."""
     settings = get_settings()
     name = collection or settings.qdrant_collection
+    point_ids = [str(uuid.uuid4()) for _ in chunks]
     points = [
         PointStruct(
-            id=str(uuid.uuid4()),
+            id=point_id,
             vector=vector,
             payload={**payload_base, "chunk_index": i, "text": chunk},
         )
-        for i, (chunk, vector) in enumerate(zip(chunks, vectors))
+        for i, (point_id, chunk, vector) in enumerate(zip(point_ids, chunks, vectors))
     ]
     client.upsert(collection_name=name, points=points)
-    return len(points)
+    return len(points), point_ids
 
 
 def delete_by_source(
@@ -108,3 +110,36 @@ def delete_by_source(
             must=[FieldCondition(key="source_id", match=MatchValue(value=source_id))]
         ),
     )
+
+
+def delete_by_source_except_new(
+    client: QdrantClient,
+    source_id: str,
+    new_point_ids: list[str],
+    collection: str | None = None,
+) -> None:
+    """Delete all points for source_id that are NOT in new_point_ids.
+
+    Used for write-then-replace atomicity: upsert new chunks first, then
+    remove old chunks so there is no gap where the document has zero chunks.
+    """
+    from qdrant_client.models import HasIdCondition, IsEmptyCondition  # noqa: F401
+    settings = get_settings()
+    name = collection or settings.qdrant_collection
+    # Scroll to find old point IDs for this source
+    results, _ = client.scroll(
+        collection_name=name,
+        scroll_filter=Filter(
+            must=[FieldCondition(key="source_id", match=MatchValue(value=source_id))]
+        ),
+        limit=10_000,
+        with_payload=False,
+        with_vectors=False,
+    )
+    old_ids = [str(pt.id) for pt in results if str(pt.id) not in new_point_ids]
+    if old_ids:
+        from qdrant_client.models import PointIdsList
+        client.delete(
+            collection_name=name,
+            points_selector=PointIdsList(points=old_ids),
+        )

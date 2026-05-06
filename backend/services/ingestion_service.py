@@ -8,9 +8,9 @@ from uuid import uuid4
 import structlog
 from docling.document_converter import DocumentConverter
 from openai import AsyncOpenAI
+from qdrant_client import QdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.config import get_settings
 from backend.models.document import DocumentRecord
 from backend.models.enums import SensitivityTier
 from backend.repositories import document_repo, vector_repo
@@ -55,6 +55,8 @@ async def ingest_document(
     filename: str,
     sensitivity_tier: SensitivityTier,
     user_id: str,
+    openai_client: AsyncOpenAI,
+    qdrant_client: QdrantClient,
     document_id: str | None = None,
 ) -> dict:
     doc_id = document_id or str(uuid4())
@@ -74,21 +76,13 @@ async def ingest_document(
     if not markdown.strip():
         raise ValueError("Document parsed to empty content")
 
-    # 2. Construct OpenAI client (injected into services per PATTERNS.md)
-    settings = get_settings()
-    openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
-
-    # 3. LLM chunking
+    # 2. LLM chunking
     chunks = await chunking_service.chunk_document(markdown, openai_client)
 
-    # 4. Embed chunks
+    # 3. Embed chunks
     vectors = await embedding_service.embed_chunks(chunks, openai_client)
 
-    # 5. Delete existing chunks for re-ingestion (D-12)
-    qdrant = vector_repo.get_qdrant_client()
-    vector_repo.delete_by_source(qdrant, doc_id)
-
-    # 6. Upsert new chunks with metadata (D-05)
+    # 4. Upsert new chunks first (write-then-replace for atomicity — D-12)
     allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["compliance"])
     payload_base = {
         "source_id": doc_id,
@@ -96,9 +90,12 @@ async def ingest_document(
         "sensitivity_tier": sensitivity_tier.value,
         "allowed_roles": allowed_roles,
     }
-    chunk_count = vector_repo.upsert_chunks(qdrant, chunks, vectors, payload_base)
+    chunk_count, new_point_ids = vector_repo.upsert_chunks(qdrant_client, chunks, vectors, payload_base)
 
-    # 7. Record in document registry (D-16)
+    # 4b. Only after new chunks are confirmed written, remove old ones
+    vector_repo.delete_by_source_except_new(qdrant_client, doc_id, new_point_ids)
+
+    # 5. Record in document registry (D-16)
     total_chars = sum(len(c) for c in chunks)
     elapsed_ms = int((time.monotonic() - start) * 1000)
 

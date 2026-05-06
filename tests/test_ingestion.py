@@ -1,7 +1,7 @@
 """Integration tests for POST /api/v1/ingest endpoint — covers all INGEST requirements."""
 
 import io
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
@@ -10,6 +10,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 
 from backend.core.database import get_db
+from backend.core.dependencies import get_openai_client, get_qdrant_client
 from backend.core.security import hash_password
 from backend.main import app
 from backend.models.base import Base
@@ -76,11 +77,18 @@ async def ingest_client(db_session_ingest, qdrant_memory):
     async def override_get_db():
         yield db_session_ingest
 
-    app.dependency_overrides[get_db] = override_get_db
+    def override_get_qdrant():
+        return qdrant_memory
 
-    with patch("backend.repositories.vector_repo.get_qdrant_client", return_value=qdrant_memory):
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-            yield c
+    def override_get_openai():
+        return MagicMock()
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_qdrant_client] = override_get_qdrant
+    app.dependency_overrides[get_openai_client] = override_get_openai
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        yield c
 
     app.dependency_overrides.clear()
 

@@ -2,8 +2,11 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
+from openai import AsyncOpenAI
 
+from backend.core.config import get_settings
 from backend.core.database import engine
+from backend.core.dependencies import init_clients
 from backend.models.base import Base
 from backend.repositories.vector_repo import get_qdrant_client, setup_collection
 from backend.routers.auth import router as auth_router
@@ -14,16 +17,23 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Dev-only: create tables directly. In production, use: uv run alembic upgrade head
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    settings = get_settings()
+    openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
+    qdrant_client = get_qdrant_client()
+    init_clients(openai_client, qdrant_client)
+
     try:
-        qdrant = get_qdrant_client()
-        setup_collection(qdrant)
-    except Exception:
+        setup_collection(qdrant_client)
+    except Exception as exc:
         logger.warning(
             "qdrant_init_failed",
             msg="Qdrant not available at startup — collection setup skipped",
+            error=str(exc),
+            error_type=type(exc).__name__,
         )
 
     yield
