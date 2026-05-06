@@ -19,3 +19,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
     return {"user_id": user_id, "role": role}
+
+
+def require_role(*allowed_roles: str):
+    async def _check(current_user: dict = Depends(get_current_user)):
+        if current_user["role"] not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{current_user['role']}' not authorized",
+            )
+        return current_user
+    return _check
