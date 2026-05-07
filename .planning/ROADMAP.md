@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Data Foundation** - Auth, RBAC, audit schema, and Qdrant/PostgreSQL infrastructure (completed 2026-04-29)
 - [x] **Phase 2: Document Ingestion** - Parse PDF/Word/Excel, chunk, tag metadata, embed into Qdrant (completed 2026-05-06)
-- [ ] **Phase 3: RAG Query Pipeline** - Filtered retrieval, reranking, generation, audit logging
+- [x] **Phase 3: RAG Query Pipeline** - Filtered retrieval, reranking, generation, audit logging (completed 2026-05-07)
 - [ ] **Phase 4: Telegram Bot** - Primary adviser interface: Q&A with source citations, draft review flow, action tracking
 - [ ] **Phase 5: Web Audit & Admin UI** - Audit log viewer, trace inspector, document registry, admin ingestion UI
 
@@ -68,9 +68,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Schema migration, model updates, service extensions, test scaffold
-- [ ] 03-02-PLAN.md — Query pipeline services: rewrite, rerank, generation, orchestrator, generation_client singleton
-- [ ] 03-03-PLAN.md — Query endpoint, Pydantic schemas, integration tests
+- [x] 03-01-PLAN.md — Schema migration, model updates, service extensions, test scaffold
+- [x] 03-02-PLAN.md — Query pipeline services: rewrite, rerank, generation, orchestrator, generation_client singleton
+- [x] 03-03-PLAN.md — Query endpoint, Pydantic schemas, integration tests
 
 ### Phase 4: Telegram Bot
 **Goal**: Advisers can query the system via Telegram, receive sourced answers, review each draft via inline keyboard, and have every action recorded in the audit trail
@@ -105,6 +105,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
 | 2. Document Ingestion | 4/4 | Complete | 2026-05-06 |
-| 3. RAG Query Pipeline | 0/3 | Not started | - |
+| 3. RAG Query Pipeline | 3/3 | Complete | 2026-05-07 |
 | 4. Telegram Bot | 0/TBD | Not started | - |
 | 5. Web Audit & Admin UI | 0/TBD | Not started | - |
