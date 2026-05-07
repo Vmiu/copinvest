@@ -9,28 +9,45 @@ from backend.models.audit_log import Session as AuditSession
 SESSION_TIMEOUT = timedelta(hours=24)
 
 
-async def get_or_create_session(db: AsyncSession, user_id: str) -> str:
+async def get_or_create_session(
+    db: AsyncSession, user_id: str, session_id: str | None = None
+) -> str:
     now = datetime.now(timezone.utc)
     cutoff = now - SESSION_TIMEOUT
-    # Find most recent open session for this user
-    result = await db.execute(
-        select(AuditSession)
-        .where(AuditSession.user_id == user_id, AuditSession.end_time.is_(None))
-        .order_by(AuditSession.start_time.desc())
-        .limit(1)
-    )
-    session = result.scalar_one_or_none()
-    # SQLite strips timezone info; normalize to naive UTC for comparison
     cutoff_naive = cutoff.replace(tzinfo=None)
-    if session:
-        activity_time = session.last_activity or session.start_time
-        if activity_time.replace(tzinfo=None) >= cutoff_naive:
-            session.last_activity = now
-            await db.flush()
-            return session.id
-    # Expire old session if exists
-    if session:
-        session.end_time = now
+
+    if session_id is not None:
+        # Caller supplied a session_id — look it up directly
+        result = await db.execute(
+            select(AuditSession).where(AuditSession.id == session_id)
+        )
+        session = result.scalar_one_or_none()
+        if session and session.end_time is None:
+            activity_time = session.last_activity or session.start_time
+            if activity_time.replace(tzinfo=None) >= cutoff_naive:
+                session.last_activity = now
+                await db.flush()
+                return session.id
+        # Session not found, expired, or closed — fall through to create new
+    else:
+        # No session_id supplied — find most recent open session for this user
+        result = await db.execute(
+            select(AuditSession)
+            .where(AuditSession.user_id == user_id, AuditSession.end_time.is_(None))
+            .order_by(AuditSession.start_time.desc())
+            .limit(1)
+        )
+        session = result.scalar_one_or_none()
+        if session:
+            activity_time = session.last_activity or session.start_time
+            if activity_time.replace(tzinfo=None) >= cutoff_naive:
+                session.last_activity = now
+                await db.flush()
+                return session.id
+        # Expire old session if exists
+        if session:
+            session.end_time = now
+
     # Create new session
     new_session = AuditSession(
         id=str(uuid4()), user_id=user_id, start_time=now,
