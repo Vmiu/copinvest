@@ -202,6 +202,7 @@ async def test_query_audit_record(async_client, auth_headers, db_session):
             "model_used": "deepseek-v4-pro",
             "prompt_tokens": 100,
             "completion_tokens": 20,
+            "prompt_sent": "Context:\n\n<user_question>test query</user_question>",
         }),
         patch("backend.repositories.vector_repo.query_with_rbac", return_value=mock_qdrant_result),
         patch("httpx.AsyncClient") as mock_http_cls,
@@ -314,7 +315,7 @@ async def test_rerank_threshold():
         mock_ctx.post = AsyncMock(return_value=mock_resp)
         mock_http_cls.return_value = mock_ctx
 
-        result = await rerank_chunks("test query", chunks, api_key="test-key", threshold=0.3, top_n=5)
+        result = await rerank_chunks("test query", chunks, threshold=0.3, top_n=5)
 
     # Only scores 0.8 and 0.5 pass threshold >= 0.3
     assert len(result) == 2
@@ -378,6 +379,7 @@ async def test_audit_new_fields(async_client, auth_headers, db_session):
             "model_used": "deepseek-v4-pro",
             "prompt_tokens": 100,
             "completion_tokens": 20,
+            "prompt_sent": "Context:\n\n<user_question>audit fields test query</user_question>",
         }),
         patch("backend.repositories.vector_repo.query_with_rbac", return_value=mock_qdrant_result),
         patch("httpx.AsyncClient") as mock_http_cls,
