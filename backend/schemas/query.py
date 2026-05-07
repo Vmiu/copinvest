@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class SourceCitation(BaseModel):
@@ -8,8 +8,8 @@ class SourceCitation(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    query: str
-    session_id: str | None = None
+    query: str = Field(..., min_length=1, max_length=2000)
+    session_id: str | None = Field(None, pattern=r'^[0-9a-f-]{36}$')
 
 
 class QueryResponse(BaseModel):

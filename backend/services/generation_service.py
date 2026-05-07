@@ -62,7 +62,7 @@ async def generate_answer(query: str, chunks: list, client: AsyncOpenAI) -> dict
     Returns dict with answer, sources, not_found, model_used, prompt_tokens, completion_tokens.
     """
     context = _build_context(chunks)
-    user_message = f"Context:\n{context}\n\nQuestion: {query}"
+    user_message = f"Context:\n{context}\n\n<user_question>{query}</user_question>"
 
     response = await client.chat.completions.create(
         model="deepseek-v4-pro",
@@ -96,4 +96,5 @@ async def generate_answer(query: str, chunks: list, client: AsyncOpenAI) -> dict
         "model_used": "deepseek-v4-pro",
         "prompt_tokens": response.usage.prompt_tokens,
         "completion_tokens": response.usage.completion_tokens,
+        "prompt_sent": user_message,
     }
