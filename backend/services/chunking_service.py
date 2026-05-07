@@ -63,7 +63,7 @@ async def _chunk_page(
         for attempt in range(MAX_ATTEMPTS):
             try:
                 response = await client.chat.completions.create(
-                    model="deepseek-chat",
+                    model="deepseek-v4-flash",
                     messages=[
                         {"role": "system", "content": CHUNKING_PROMPT},
                         {"role": "user", "content": user_content},

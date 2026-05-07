@@ -55,3 +55,15 @@ async def update_adviser_action(
     audit.final_response = final_response
     audit.status = AuditStatus.completed
     await db.flush()
+
+
+async def update_query_fields(
+    db: AsyncSession, audit: AuditLog,
+    rewritten_query: str | None,
+    chunks_passed_rerank: int,
+    not_found: bool,
+) -> None:
+    audit.rewritten_query = rewritten_query
+    audit.chunks_passed_rerank = chunks_passed_rerank
+    audit.not_found = not_found
+    await db.flush()

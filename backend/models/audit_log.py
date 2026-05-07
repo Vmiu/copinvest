@@ -14,6 +14,7 @@ class Session(Base):
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_activity: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class AuditLog(Base):
@@ -39,3 +40,7 @@ class AuditLog(Base):
     adviser_action: Mapped[AdviserAction | None] = mapped_column(SAEnum(AdviserAction), nullable=True)
     adviser_edited: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     final_response: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Added for query pipeline (Phase 3)
+    rewritten_query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    chunks_passed_rerank: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    not_found: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
