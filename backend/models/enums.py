@@ -25,3 +25,4 @@ class AuditStatus(str, enum.Enum):
     retrieved = "retrieved"
     generated = "generated"
     completed = "completed"
+    error = "error"

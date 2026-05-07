@@ -67,3 +67,11 @@ async def update_query_fields(
     audit.chunks_passed_rerank = chunks_passed_rerank
     audit.not_found = not_found
     await db.flush()
+
+
+async def update_error(
+    db: AsyncSession, audit: AuditLog, error_message: str,
+) -> None:
+    audit.status = AuditStatus.error
+    audit.llm_response = f"ERROR: {error_message}"
+    await db.flush()
