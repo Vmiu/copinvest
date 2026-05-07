@@ -4,7 +4,6 @@ from openai import AsyncOpenAI
 from qdrant_client import QdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.core.config import get_settings
 from backend.core.database import get_db
 from backend.core.dependencies import (
     get_chunking_client,
@@ -29,7 +28,6 @@ async def query_documents(
     generation_client: AsyncOpenAI = Depends(get_generation_client),
     qdrant_client: QdrantClient = Depends(get_qdrant_client),
 ):
-    settings = get_settings()
     try:
         result = await query_service.process_query(
             db=db,
@@ -40,8 +38,6 @@ async def query_documents(
             chunking_client=chunking_client,
             generation_client=generation_client,
             qdrant_client=qdrant_client,
-            openroute_api_key=settings.openroute_api_key,
-            voyage_api_key=settings.voyage_api_key,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))

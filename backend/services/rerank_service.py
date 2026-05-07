@@ -1,6 +1,8 @@
 import httpx
 import structlog
 
+from backend.core.config import get_settings
+
 logger = structlog.get_logger()
 
 RERANK_URL = "https://openrouter.ai/api/v1/rerank"
@@ -10,7 +12,6 @@ RERANK_MODEL = "cohere/rerank-v3.5"
 async def rerank_chunks(
     query: str,
     chunks: list,
-    api_key: str,
     threshold: float = 0.3,
     top_n: int = 5,
 ) -> list:
@@ -18,11 +19,12 @@ async def rerank_chunks(
 
     chunks: list of ScoredPoint from Qdrant.
     Returns top_n ScoredPoints that pass the threshold, ordered by relevance_score desc.
-    Falls back to top top_n by original Qdrant score on httpx error.
+    Falls back to empty list on httpx error to avoid passing low-confidence chunks to LLM.
     """
     if not chunks:
         return []
 
+    api_key = get_settings().openroute_api_key
     documents = [pt.payload["text"] for pt in chunks]
 
     try:
@@ -58,4 +60,5 @@ async def rerank_chunks(
 
     except httpx.HTTPError as e:
         logger.warning("rerank_fallback", error=str(e))
-        return chunks[:top_n]
+        # Return empty — prefer not_found over low-confidence answer
+        return []
