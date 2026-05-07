@@ -14,7 +14,6 @@ async def get_or_create_session(
 ) -> str:
     now = datetime.now(timezone.utc)
     cutoff = now - SESSION_TIMEOUT
-    cutoff_naive = cutoff.replace(tzinfo=None)
 
     if session_id is not None:
         # Caller supplied a session_id — look it up directly
@@ -22,9 +21,15 @@ async def get_or_create_session(
             select(AuditSession).where(AuditSession.id == session_id)
         )
         session = result.scalar_one_or_none()
+        # Ownership check — treat mismatched session as not found
+        if session and session.user_id != user_id:
+            session = None
         if session and session.end_time is None:
             activity_time = session.last_activity or session.start_time
-            if activity_time.replace(tzinfo=None) >= cutoff_naive:
+            # Ensure timezone-aware comparison
+            if activity_time.tzinfo is None:
+                activity_time = activity_time.replace(tzinfo=timezone.utc)
+            if activity_time >= cutoff:
                 session.last_activity = now
                 await db.flush()
                 return session.id
@@ -40,7 +45,10 @@ async def get_or_create_session(
         session = result.scalar_one_or_none()
         if session:
             activity_time = session.last_activity or session.start_time
-            if activity_time.replace(tzinfo=None) >= cutoff_naive:
+            # Ensure timezone-aware comparison
+            if activity_time.tzinfo is None:
+                activity_time = activity_time.replace(tzinfo=timezone.utc)
+            if activity_time >= cutoff:
                 session.last_activity = now
                 await db.flush()
                 return session.id
