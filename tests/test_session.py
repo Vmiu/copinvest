@@ -1,5 +1,7 @@
 from datetime import datetime, timezone, timedelta
 
+import pytest
+
 from backend.models.user import User
 from backend.models.audit_log import Session as AuditSession
 from backend.services.session_service import get_or_create_session
@@ -13,6 +15,7 @@ async def _seed_user(db):
     return user
 
 
+@pytest.mark.asyncio
 async def test_create_session(db_session):
     await _seed_user(db_session)
     session_id = await get_or_create_session(db_session, "test-user")
@@ -20,6 +23,7 @@ async def test_create_session(db_session):
     assert isinstance(session_id, str)
 
 
+@pytest.mark.asyncio
 async def test_reuse_active_session(db_session):
     await _seed_user(db_session)
     sid1 = await get_or_create_session(db_session, "test-user")
@@ -27,6 +31,7 @@ async def test_reuse_active_session(db_session):
     assert sid1 == sid2
 
 
+@pytest.mark.asyncio
 async def test_expire_inactive_session(db_session):
     await _seed_user(db_session)
     sid1 = await get_or_create_session(db_session, "test-user")
