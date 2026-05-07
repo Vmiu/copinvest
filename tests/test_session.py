@@ -31,13 +31,13 @@ async def test_expire_inactive_session(db_session):
     await _seed_user(db_session)
     sid1 = await get_or_create_session(db_session, "test-user")
 
-    # Manually age the session beyond the 30-min timeout
+    # Manually age the session beyond the 24h timeout
     from sqlalchemy import select
     result = await db_session.execute(
         select(AuditSession).where(AuditSession.id == sid1)
     )
     old_session = result.scalar_one()
-    old_session.start_time = datetime.now(timezone.utc) - timedelta(minutes=31)
+    old_session.last_activity = datetime.now(timezone.utc) - timedelta(hours=25)
     await db_session.flush()
 
     sid2 = await get_or_create_session(db_session, "test-user")
