@@ -65,7 +65,12 @@ Plans:
   2. When no relevant content exists above the confidence threshold, the system returns "not found in approved documents" rather than generating an answer
   3. Retrieved chunks are reranked by a cross-encoder before being passed to the LLM
   4. The system prompt prevents the LLM from answering from training data — all answers trace to retrieved chunks
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Schema migration, model updates, service extensions, test scaffold
+- [ ] 03-02-PLAN.md — Query pipeline services: rewrite, rerank, generation, orchestrator, generation_client singleton
+- [ ] 03-03-PLAN.md — Query endpoint, Pydantic schemas, integration tests
 
 ### Phase 4: Telegram Bot
 **Goal**: Advisers can query the system via Telegram, receive sourced answers, review each draft via inline keyboard, and have every action recorded in the audit trail
@@ -100,6 +105,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
 | 2. Document Ingestion | 4/4 | Complete | 2026-05-06 |
-| 3. RAG Query Pipeline | 0/TBD | Not started | - |
+| 3. RAG Query Pipeline | 0/3 | Not started | - |
 | 4. Telegram Bot | 0/TBD | Not started | - |
 | 5. Web Audit & Admin UI | 0/TBD | Not started | - |
