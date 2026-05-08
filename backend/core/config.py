@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     voyage_api_key: str
     access_token_expire_minutes: int = 1440  # 24h
     debug: bool = False
+    telegram_bot_token: str = ""
+    telegram_user_map: str = "{}"  # JSON string mapping telegram_user_id (str) -> {"user_id": str, "role": str}
 
     model_config = {"env_file": ".env"}
 
