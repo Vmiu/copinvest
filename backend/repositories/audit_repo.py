@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.audit_log import AuditLog
+from backend.models.enums import AdviserAction
 
 
 async def get_audit_by_id(db: AsyncSession, trace_id: str) -> AuditLog | None:
@@ -15,3 +16,18 @@ async def get_audits_by_session(db: AsyncSession, session_id: str) -> list[Audit
         .order_by(AuditLog.timestamp)
     )
     return list(result.scalars().all())
+
+
+async def update_adviser_action(
+    db: AsyncSession,
+    trace_id: str,
+    action: str,
+    final_response: str | None,
+) -> None:
+    audit = await get_audit_by_id(db, trace_id)
+    if audit is None:
+        raise ValueError(f"AuditLog {trace_id} not found")
+    audit.adviser_action = AdviserAction(action)
+    audit.adviser_edited = (action == "edited")
+    audit.final_response = final_response
+    await db.flush()

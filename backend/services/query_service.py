@@ -26,6 +26,7 @@ async def process_query(
     chunking_client: AsyncOpenAI,
     generation_client: AsyncOpenAI,
     qdrant_client: QdrantClient,
+    channel: str = "web",
 ) -> dict:
     """Orchestrate the full RAG pipeline: session → audit → rewrite → embed → retrieve → rerank → generate → update audit."""
 
@@ -36,7 +37,7 @@ async def process_query(
 
     # 2. Audit record — commit immediately so it survives pipeline failures
     audit = await audit_service.create_audit_record(
-        db, user_id, query, session_id, channel="web"
+        db, user_id, query, session_id, channel=channel
     )
     await db.commit()
 
