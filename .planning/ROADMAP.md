@@ -81,7 +81,12 @@ Plans:
   2. The bot rejects any incoming request that fails webhook secret validation
   3. Each answer is presented as a draft with an inline keyboard offering Approve / Edit / Discard — the response is not considered final until the adviser acts
   4. The adviser's action (approved/edited/discarded) is recorded in the audit trail against the originating query trace_id
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Backend surgical changes: channel param, update_adviser_action, Telegram settings
+- [ ] 04-02-PLAN.md — Telegram bot module: identity, handlers, ConversationHandler, entry point
+- [ ] 04-03-PLAN.md — Tests: audit write-back, channel param, handler unit tests
 
 ### Phase 5: Web Audit & Admin UI
 **Goal**: Compliance officers and admins can inspect the full audit trail, drill into individual query traces, view the document registry, and trigger ingestion — all from a React dashboard
