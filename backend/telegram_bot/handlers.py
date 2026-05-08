@@ -93,7 +93,7 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await callback.message.reply_text("Send your revised version:")
         return AWAITING_EDIT
 
-    # Approve or Discard
+    # Approve or Discard — map callback data to AdviserAction enum values
     if action == "approve":
         # final_response = llm_response (copy from audit record)
         if trace_id:
@@ -102,14 +102,16 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
                 final_response = audit_row.llm_response if audit_row else None
         else:
             final_response = None
+        audit_action = "approved"
         confirm_text = "Response approved and recorded."
     else:  # discard
         final_response = None
+        audit_action = "discarded"
         confirm_text = "Response discarded."
 
     if trace_id:
         async with async_session() as db:
-            await audit_repo.update_adviser_action(db, trace_id, action, final_response)
+            await audit_repo.update_adviser_action(db, trace_id, audit_action, final_response)
             await db.commit()
 
     await callback.message.reply_text(confirm_text)
