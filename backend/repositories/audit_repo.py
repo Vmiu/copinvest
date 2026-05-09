@@ -1,4 +1,6 @@
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.audit_log import AuditLog
@@ -31,3 +33,29 @@ async def update_adviser_action(
     audit.adviser_edited = (action == "edited")
     audit.final_response = final_response
     await db.flush()
+
+
+async def list_audits(
+    db: AsyncSession,
+    offset: int = 0,
+    limit: int = 25,
+    user_id: str | None = None,
+    session_id: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> tuple[list[AuditLog], int]:
+    stmt = select(AuditLog)
+    if user_id:
+        stmt = stmt.where(AuditLog.user_id == user_id)
+    if session_id:
+        stmt = stmt.where(AuditLog.session_id == session_id)
+    if date_from:
+        stmt = stmt.where(AuditLog.timestamp >= datetime.fromisoformat(date_from))
+    if date_to:
+        stmt = stmt.where(AuditLog.timestamp <= datetime.fromisoformat(date_to))
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await db.execute(count_stmt)).scalar_one()
+    result = await db.execute(
+        stmt.order_by(AuditLog.timestamp.desc()).offset(offset).limit(limit)
+    )
+    return list(result.scalars().all()), total

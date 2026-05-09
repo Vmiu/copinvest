@@ -29,3 +29,10 @@ async def upsert_document_record(db: AsyncSession, record: DocumentRecord) -> Do
     db.add(record)
     await db.flush()
     return record
+
+
+async def list_documents(db: AsyncSession) -> list[DocumentRecord]:
+    result = await db.execute(
+        select(DocumentRecord).order_by(DocumentRecord.ingested_at.desc())
+    )
+    return list(result.scalars().all())
