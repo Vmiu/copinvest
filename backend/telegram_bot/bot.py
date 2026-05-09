@@ -37,15 +37,21 @@ async def main() -> None:
     app = Application.builder().token(settings.telegram_bot_token).build()
     app.bot_data.update(bot_context)
 
-    # Standalone handler for approve/discard callbacks (fires regardless of conversation state)
-    app.add_handler(CallbackQueryHandler(handle_action))
-
     conv = ConversationHandler(
-        entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, handle_query)],
-        states={AWAITING_EDIT: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_reply)]},
+        entry_points=[
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_query),
+            CallbackQueryHandler(handle_action),  # handles approve/discard/edit at top level
+        ],
+        states={
+            AWAITING_EDIT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_reply),
+                CallbackQueryHandler(handle_action),  # allow re-action while awaiting edit
+            ]
+        },
         fallbacks=[],
         per_user=True,
         per_chat=True,
+        per_message=False,
         conversation_timeout=300,  # 5 minutes
     )
     app.add_handler(conv)
