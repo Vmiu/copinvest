@@ -11,37 +11,25 @@ logger = structlog.get_logger()
 
 AWAITING_EDIT = 1
 
-_HELP_TEXT = (
-    "Please use one of these commands:\n\n"
-    "/brief <topic or client> — prepare a meeting brief\n"
-    "/product <product name> — summarize product information\n"
-    "/followup <context> — draft a compliant follow-up note"
-)
 
-
-def _get_verified_user(update: Update):
-    """Return internal user dict or None if unregistered."""
+async def handle_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle incoming text messages: run RAG pipeline, send draft with inline keyboard."""
     if update.effective_user is None:
-        return None
-    return get_user_from_telegram_id(update.effective_user.id)
+        return ConversationHandler.END
+    telegram_user_id = update.effective_user.id
 
-
-async def _run_query(update: Update, context: ContextTypes.DEFAULT_TYPE, query: str, intent: str) -> int:
-    """Shared pipeline: embed → retrieve → generate → send draft with keyboard."""
-    user = _get_verified_user(update)
+    user = get_user_from_telegram_id(telegram_user_id)
     if user is None:
         await update.message.reply_text(
             "Your Telegram account is not registered. Contact your administrator."
         )
         return ConversationHandler.END
 
-    if not query.strip():
-        await update.message.reply_text(_HELP_TEXT)
-        return ConversationHandler.END
-
     await update.message.chat.send_action("typing")
 
+    query_text = update.message.text
     session_id = context.user_data.get("session_id")
+
     chunking_client = context.bot_data["chunking_client"]
     generation_client = context.bot_data["generation_client"]
     qdrant_client = context.bot_data["qdrant_client"]
@@ -50,19 +38,18 @@ async def _run_query(update: Update, context: ContextTypes.DEFAULT_TYPE, query: 
         async with async_session() as db:
             result = await process_query(
                 db=db,
-                query=query,
+                query=query_text,
                 session_id=session_id,
                 user_id=user["user_id"],
                 user_role=user["role"],
                 chunking_client=chunking_client,
                 generation_client=generation_client,
                 qdrant_client=qdrant_client,
-                channel=f"telegram/{intent}",
-                intent=intent,
+                channel="telegram",
             )
             await db.commit()
     except Exception as exc:
-        logger.error("telegram_query_error", error=str(exc), intent=intent)
+        logger.error("telegram_query_error", error=str(exc))
         await update.message.reply_text("Something went wrong — please try again.")
         return ConversationHandler.END
 
@@ -72,7 +59,10 @@ async def _run_query(update: Update, context: ContextTypes.DEFAULT_TYPE, query: 
     answer = result["answer"]
     sources = result.get("sources", [])
     if sources:
-        source_lines = "\n".join(f"• {s['doc_name']}" + (f" — {s['section_title']}" if s.get("section_title") else "") for s in sources)
+        source_lines = "\n".join(
+            f"• {s['doc_name']}" + (f" — {s['section_title']}" if s.get("section_title") else "")
+            for s in sources
+        )
         draft_text = f"{answer}\n\nSources:\n{source_lines}"
     else:
         draft_text = answer
@@ -83,39 +73,6 @@ async def _run_query(update: Update, context: ContextTypes.DEFAULT_TYPE, query: 
         InlineKeyboardButton("✗ Discard", callback_data="discard"),
     ]])
     await update.message.reply_text(draft_text, reply_markup=keyboard)
-    return ConversationHandler.END
-
-
-async def handle_brief(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /brief <topic> — generate a meeting brief."""
-    query = " ".join(context.args) if context.args else ""
-    if not query:
-        await update.message.reply_text("Usage: /brief <client name or topic>")
-        return ConversationHandler.END
-    return await _run_query(update, context, query, intent="brief")
-
-
-async def handle_product(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /product <name> — summarize product information."""
-    query = " ".join(context.args) if context.args else ""
-    if not query:
-        await update.message.reply_text("Usage: /product <product name>")
-        return ConversationHandler.END
-    return await _run_query(update, context, query, intent="product")
-
-
-async def handle_followup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handle /followup <context> — draft a compliant follow-up note."""
-    query = " ".join(context.args) if context.args else ""
-    if not query:
-        await update.message.reply_text("Usage: /followup <meeting context or client name>")
-        return ConversationHandler.END
-    return await _run_query(update, context, query, intent="followup")
-
-
-async def handle_unknown_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Reject plain text — guide user to the three commands."""
-    await update.message.reply_text(_HELP_TEXT)
     return ConversationHandler.END
 
 

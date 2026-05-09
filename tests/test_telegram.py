@@ -132,28 +132,17 @@ def _make_mock_session():
     return mock_session_cm, mock_db
 
 
-# ── handle_brief / handle_product / handle_followup tests ────────────────────
+# ── handle_query tests ────────────────────────────────────────────────────────
 
-def make_command_update(text: str, args: list[str], user_id: int = 12345):
-    update = make_update(text, user_id=user_id)
-    return update
-
-
-def make_command_context(args: list[str], user_data=None, bot_data=None):
-    context = make_context(user_data=user_data, bot_data=bot_data)
-    context.args = args
-    return context
-
-
-async def test_handle_brief_unregistered_user():
+async def test_handle_query_unregistered_user():
     from telegram.ext import ConversationHandler
-    from backend.telegram_bot.handlers import handle_brief
+    from backend.telegram_bot.handlers import handle_query
 
-    update = make_update("", user_id=99999)
-    context = make_command_context(args=["client", "X"])
+    update = make_update("What is fund X?", user_id=99999)
+    context = make_context()
 
     with patch("backend.telegram_bot.handlers.get_user_from_telegram_id", return_value=None):
-        result = await handle_brief(update, context)
+        result = await handle_query(update, context)
 
     update.message.reply_text.assert_called_once_with(
         "Your Telegram account is not registered. Contact your administrator."
@@ -161,13 +150,13 @@ async def test_handle_brief_unregistered_user():
     assert result == ConversationHandler.END
 
 
-async def test_handle_brief_sends_draft_with_keyboard():
+async def test_handle_query_sends_draft_with_keyboard():
     from telegram import InlineKeyboardMarkup
     from telegram.ext import ConversationHandler
-    from backend.telegram_bot.handlers import handle_brief
+    from backend.telegram_bot.handlers import handle_query
 
-    update = make_update("")
-    context = make_command_context(args=["fund", "X"])
+    update = make_update("What is fund X?")
+    context = make_context()
     mock_session_cm, mock_db = _make_mock_session()
 
     fake_user = {"user_id": "u-001", "role": "adviser"}
@@ -176,7 +165,7 @@ async def test_handle_brief_sends_draft_with_keyboard():
     with patch("backend.telegram_bot.handlers.get_user_from_telegram_id", return_value=fake_user), \
          patch("backend.telegram_bot.handlers.process_query", new=AsyncMock(return_value=fake_result)), \
          patch("backend.telegram_bot.handlers.async_session", return_value=mock_session_cm):
-        result = await handle_brief(update, context)
+        result = await handle_query(update, context)
 
     assert result == ConversationHandler.END
     call_args = update.message.reply_text.call_args
@@ -186,11 +175,11 @@ async def test_handle_brief_sends_draft_with_keyboard():
     assert len(reply_markup.inline_keyboard[0]) == 3
 
 
-async def test_handle_brief_stores_trace_id():
-    from backend.telegram_bot.handlers import handle_brief
+async def test_handle_query_stores_trace_id():
+    from backend.telegram_bot.handlers import handle_query
 
-    update = make_update("")
-    context = make_command_context(args=["fund", "X"])
+    update = make_update("What is fund X?")
+    context = make_context()
     mock_session_cm, mock_db = _make_mock_session()
 
     fake_user = {"user_id": "u-001", "role": "adviser"}
@@ -199,17 +188,17 @@ async def test_handle_brief_stores_trace_id():
     with patch("backend.telegram_bot.handlers.get_user_from_telegram_id", return_value=fake_user), \
          patch("backend.telegram_bot.handlers.process_query", new=AsyncMock(return_value=fake_result)), \
          patch("backend.telegram_bot.handlers.async_session", return_value=mock_session_cm):
-        await handle_brief(update, context)
+        await handle_query(update, context)
 
     assert context.user_data["trace_id"] == "t-001"
 
 
-async def test_handle_brief_pipeline_error():
+async def test_handle_query_pipeline_error():
     from telegram.ext import ConversationHandler
-    from backend.telegram_bot.handlers import handle_brief
+    from backend.telegram_bot.handlers import handle_query
 
-    update = make_update("")
-    context = make_command_context(args=["fund", "X"])
+    update = make_update("What is fund X?")
+    context = make_context()
     mock_session_cm, mock_db = _make_mock_session()
 
     fake_user = {"user_id": "u-001", "role": "adviser"}
@@ -217,7 +206,7 @@ async def test_handle_brief_pipeline_error():
     with patch("backend.telegram_bot.handlers.get_user_from_telegram_id", return_value=fake_user), \
          patch("backend.telegram_bot.handlers.process_query", new=AsyncMock(side_effect=RuntimeError("pipeline failed"))), \
          patch("backend.telegram_bot.handlers.async_session", return_value=mock_session_cm):
-        result = await handle_brief(update, context)
+        result = await handle_query(update, context)
 
     update.message.reply_text.assert_called_once_with("Something went wrong — please try again.")
     assert result == ConversationHandler.END

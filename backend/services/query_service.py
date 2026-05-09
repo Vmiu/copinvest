@@ -27,7 +27,6 @@ async def process_query(
     generation_client: AsyncOpenAI,
     qdrant_client: QdrantClient,
     channel: str = "web",
-    intent: str = "default",
 ) -> dict:
     """Orchestrate the full RAG pipeline: session → audit → rewrite → embed → retrieve → rerank → generate → update audit."""
 
@@ -86,7 +85,7 @@ async def process_query(
         )
 
         # 8. Generate
-        gen = await generation_service.generate_answer(rewritten, reranked, generation_client, intent=intent)
+        gen = await generation_service.generate_answer(rewritten, reranked, generation_client)
 
         # 6b. Update retrieval audit with actual prompt from generation
         await audit_service.update_retrieval(db, audit, retrieved_chunks_json, max_tier, gen["prompt_sent"])

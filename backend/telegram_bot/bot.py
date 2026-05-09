@@ -3,22 +3,13 @@ from qdrant_client import QdrantClient
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
-    CommandHandler,
     ConversationHandler,
     MessageHandler,
     filters,
 )
 
 from backend.core.config import get_settings
-from backend.telegram_bot.handlers import (
-    AWAITING_EDIT,
-    handle_action,
-    handle_brief,
-    handle_edit_reply,
-    handle_followup,
-    handle_product,
-    handle_unknown_text,
-)
+from backend.telegram_bot.handlers import AWAITING_EDIT, handle_action, handle_edit_reply, handle_query
 
 
 def main() -> None:
@@ -46,11 +37,8 @@ def main() -> None:
 
     conv = ConversationHandler(
         entry_points=[
-            CommandHandler("brief", handle_brief),
-            CommandHandler("product", handle_product),
-            CommandHandler("followup", handle_followup),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_query),
             CallbackQueryHandler(handle_action),
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown_text),
         ],
         states={
             AWAITING_EDIT: [
@@ -58,9 +46,7 @@ def main() -> None:
                 CallbackQueryHandler(handle_action),
             ]
         },
-        fallbacks=[
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown_text),
-        ],
+        fallbacks=[],
         per_user=True,
         per_chat=True,
         per_message=False,
