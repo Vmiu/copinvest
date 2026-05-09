@@ -14,6 +14,8 @@ AWAITING_EDIT = 1  # ConversationHandler state constant
 
 async def handle_query(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle incoming text messages: run RAG pipeline, send draft with inline keyboard."""
+    if update.effective_user is None:
+        return ConversationHandler.END
     telegram_user_id = update.effective_user.id
 
     # Identity check (T-04-04)
