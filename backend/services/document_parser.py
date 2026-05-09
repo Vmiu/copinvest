@@ -6,7 +6,7 @@ from openai import AsyncOpenAI
 
 logger = structlog.get_logger()
 
-VISION_MODEL = "qwen/qwen3-vl-32b-instruct"
+VISION_MODEL = "google/gemini-flash-1.5"
 
 _VISION_PROMPT = (
     "You are parsing a page from a financial document for a RAG system.\n"
