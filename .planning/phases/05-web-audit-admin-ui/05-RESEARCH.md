@@ -688,27 +688,15 @@ export interface IngestResponse {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Tailwind v3 vs v4**
-   - What we know: CLAUDE.md specifies "Tailwind CSS 3.x"; npm latest is 4.3.0; shadcn CLI 4.7.0 defaults to v4
-   - What's unclear: Whether the planner should pin to v3 to match CLAUDE.md or use v4 (current)
-   - Recommendation: Use Tailwind v4 — it is current, shadcn supports it, and the CLAUDE.md spec is from project setup time. The planner should note this deviation from CLAUDE.md.
+1. **Tailwind v3 vs v4** — RESOLVED: Use Tailwind v4 (current npm latest 4.3.0; shadcn CLI defaults to v4). CLAUDE.md spec was written at project setup time. Plan 05-02 installs `tailwindcss @tailwindcss/vite` (v4).
 
-2. **React version: 18 vs 19**
-   - What we know: CLAUDE.md specifies "React 18.x"; npm latest is 19.2.6
-   - What's unclear: Whether to pin to 18 or use 19
-   - Recommendation: Use React 18.3.x (latest 18.x) to match CLAUDE.md. `npm create vite@latest` with `--template react-ts` will install the latest React; pin to `react@18` explicitly.
+2. **React version: 18 vs 19** — RESOLVED: Pin to React 18.3.x to match CLAUDE.md. Plan 05-02 explicitly pins `react@^18.3.1` and `react-dom@^18.3.1` after Vite scaffold.
 
-3. **Vite proxy vs FastAPI CORS**
-   - What we know: Both approaches work for dev; CORS middleware also works in production
-   - What's unclear: Whether production deployment uses a reverse proxy that handles CORS
-   - Recommendation: Add FastAPI CORSMiddleware (Pattern 7) with an env var for allowed origins. This works in both dev and production without Vite proxy config.
+3. **Vite proxy vs FastAPI CORS** — RESOLVED: Use both — FastAPI CORSMiddleware with explicit origins list (`["http://localhost:5173", "http://localhost:3000"]`) for production correctness, plus Vite proxy for dev. Plan 05-01 adds CORSMiddleware to main.py; Plan 05-02 adds proxy to vite.config.ts.
 
-4. **GET /api/v1/audit/:trace_id — new endpoint or reuse existing?**
-   - What we know: `audit_repo.get_audit_by_id` exists; no router endpoint for it exists yet
-   - What's unclear: Whether there is an existing undiscovered endpoint
-   - Recommendation: Add `GET /api/v1/audit/{trace_id}` to the new audit router. The repo function already exists.
+4. **GET /api/v1/audit/:trace_id — new endpoint or reuse existing?** — RESOLVED: Add new `GET /api/v1/audit/{trace_id}` endpoint to the new `backend/routers/audit.py`. The repo function `audit_repo.get_audit_by_id` already exists and is reused directly.
 
 ---
 

@@ -43,7 +43,7 @@
 ### Telegram Bot (Primary Adviser Interface)
 
 - [ ] **TELE-01**: Adviser can send a text message to the Telegram bot and receive a text answer with inline source citations (document name and section reference)
-- [ ] **TELE-02**: Telegram bot validates webhook secret on every incoming request
+- [ ] **TELE-02**: Bot authenticates incoming requests using Telegram's bot token mechanism (long-polling mode — no webhook secret required; bot raises ValueError on startup if TELEGRAM_BOT_TOKEN is not set)
 - [ ] **TELE-03**: Bot presents each generated answer as a draft with an inline keyboard offering Approve / Edit / Discard actions before the response is considered final
 - [ ] **TELE-04**: Adviser action (approved/edited/discarded) selected via inline keyboard is recorded in the audit trail against the originating query
 
