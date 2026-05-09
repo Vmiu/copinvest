@@ -19,13 +19,13 @@ dependencies = [
     "pymupdf>=1.27.0",
     "openai>=1.68.0",
     "python-telegram-bot>=22.7",
+    "httpx>=0.28.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.4.0",
     "pytest-asyncio==0.26.0",
-    "httpx>=0.28.0",
 ]
 
 [tool.setuptools.packages.find]
