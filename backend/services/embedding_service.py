@@ -12,7 +12,7 @@ VOYAGE_MODEL = "voyage-finance-2"
 VOYAGE_EMBED_URL = "https://api.voyageai.com/v1/embeddings"
 EMBEDDING_DIMENSIONS = 1024
 _BATCH_SIZE = 10
-_BATCH_DELAY = 2.0  # seconds between batches — stays within Voyage free-tier RPM
+_BATCH_DELAY = 10.0  # seconds between batches — Voyage free-tier has strict RPM
 
 
 async def embed_chunks(chunks: list[str], client: AsyncOpenAI) -> list[list[float]]:
