@@ -2,14 +2,13 @@ from openai import AsyncOpenAI
 from qdrant_client import QdrantClient
 from telegram.ext import (
     Application,
-    CallbackQueryHandler,
     ConversationHandler,
     MessageHandler,
     filters,
 )
 
 from backend.core.config import get_settings
-from backend.telegram_bot.handlers import AWAITING_EDIT, handle_action, handle_edit_reply, handle_query
+from backend.telegram_bot.handlers import handle_query
 
 
 def main() -> None:
@@ -35,23 +34,6 @@ def main() -> None:
         "qdrant_client": qdrant_client,
     })
 
-    conv = ConversationHandler(
-        entry_points=[
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_query),
-            CallbackQueryHandler(handle_action),
-        ],
-        states={
-            AWAITING_EDIT: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_reply),
-                CallbackQueryHandler(handle_action),
-            ]
-        },
-        fallbacks=[],
-        per_user=True,
-        per_chat=True,
-        per_message=False,
-        conversation_timeout=300,
-    )
-    app.add_handler(conv)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_query))
 
     app.run_polling()
