@@ -116,6 +116,7 @@ async def process_query(
         "answer": gen["answer"],
         "sources": gen["sources"],
         "trace_id": audit.id,
+        "session_id": session_id,
         "not_found": gen["not_found"],
         "chunks_retrieved": len(reranked),
         "model_used": gen["model_used"],
