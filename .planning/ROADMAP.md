@@ -78,7 +78,7 @@ Plans:
 **Requirements**: TELE-01, TELE-02, TELE-03, TELE-04
 **Success Criteria** (what must be TRUE):
   1. Adviser can send a text message to the bot and receive a text answer with inline source citations
-  2. The bot rejects any incoming request that fails webhook secret validation
+  2. The bot rejects unregistered Telegram users and raises ValueError on startup if TELEGRAM_BOT_TOKEN is not set (long-polling mode — no webhook secret required)
   3. Each answer is presented as a draft with an inline keyboard offering Approve / Edit / Discard — the response is not considered final until the adviser acts
   4. The adviser's action (approved/edited/discarded) is recorded in the audit trail against the originating query trace_id
 **Plans:** 3 plans
