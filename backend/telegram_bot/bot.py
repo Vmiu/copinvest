@@ -12,7 +12,7 @@ from backend.core.config import get_settings
 from backend.telegram_bot.handlers import AWAITING_EDIT, handle_action, handle_edit_reply, handle_query
 
 
-async def main() -> None:
+def main() -> None:
     settings = get_settings()
 
     if not settings.telegram_bot_token:
@@ -56,4 +56,4 @@ async def main() -> None:
     )
     app.add_handler(conv)
 
-    await app.run_polling()
+    app.run_polling()
