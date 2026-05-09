@@ -97,8 +97,12 @@ Plans:
   2. Admin can open any audit record and view the complete trace: query → retrieved chunks → prompt sent → LLM response → adviser action
   3. Admin can view the document registry listing all ingested documents with sensitivity tier, chunk count, and ingestion date
   4. Admin can trigger document ingestion and assign sensitivity tiers through the UI without using the CLI
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Backend API endpoints: audit_repo + document_repo extensions, audit/documents routers, schemas, CORS, integration tests
+- [ ] 05-02-PLAN.md — Frontend scaffold: Vite + React 18 + shadcn/ui + Sidebar + api client + TypeScript types
+- [ ] 05-03-PLAN.md — Frontend pages: AuditLog, TraceInspector, DocumentRegistry, IngestDocument
 
 ## Progress
 
@@ -111,5 +115,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
 | 2. Document Ingestion | 4/4 | Complete | 2026-05-06 |
 | 3. RAG Query Pipeline | 3/3 | Complete | 2026-05-07 |
-| 4. Telegram Bot | 0/TBD | Not started | - |
-| 5. Web Audit & Admin UI | 0/TBD | Not started | - |
+| 4. Telegram Bot | 0/3 | Not started | - |
+| 5. Web Audit & Admin UI | 0/3 | Not started | - |
