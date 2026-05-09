@@ -3,13 +3,22 @@ from qdrant_client import QdrantClient
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
+    CommandHandler,
     ConversationHandler,
     MessageHandler,
     filters,
 )
 
 from backend.core.config import get_settings
-from backend.telegram_bot.handlers import AWAITING_EDIT, handle_action, handle_edit_reply, handle_query
+from backend.telegram_bot.handlers import (
+    AWAITING_EDIT,
+    handle_action,
+    handle_brief,
+    handle_edit_reply,
+    handle_followup,
+    handle_product,
+    handle_unknown_text,
+)
 
 
 def main() -> None:
@@ -28,31 +37,34 @@ def main() -> None:
     )
     qdrant_client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
 
-    bot_context = {
+    app = Application.builder().token(settings.telegram_bot_token).build()
+    app.bot_data.update({
         "chunking_client": chunking_client,
         "generation_client": generation_client,
         "qdrant_client": qdrant_client,
-    }
-
-    app = Application.builder().token(settings.telegram_bot_token).build()
-    app.bot_data.update(bot_context)
+    })
 
     conv = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_query),
-            CallbackQueryHandler(handle_action),  # handles approve/discard/edit at top level
+            CommandHandler("brief", handle_brief),
+            CommandHandler("product", handle_product),
+            CommandHandler("followup", handle_followup),
+            CallbackQueryHandler(handle_action),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown_text),
         ],
         states={
             AWAITING_EDIT: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_edit_reply),
-                CallbackQueryHandler(handle_action),  # allow re-action while awaiting edit
+                CallbackQueryHandler(handle_action),
             ]
         },
-        fallbacks=[],
+        fallbacks=[
+            MessageHandler(filters.TEXT & ~filters.COMMAND, handle_unknown_text),
+        ],
         per_user=True,
         per_chat=True,
         per_message=False,
-        conversation_timeout=300,  # 5 minutes
+        conversation_timeout=300,
     )
     app.add_handler(conv)
 
