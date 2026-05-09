@@ -14,7 +14,7 @@ from backend.services import audit_service, generation_service, query_rewrite_se
 logger = structlog.get_logger()
 
 VOYAGE_EMBED_URL = "https://api.voyageai.com/v1/embeddings"
-VOYAGE_MODEL = "voyage-3"
+VOYAGE_MODEL = "voyage-finance-2"
 
 
 async def process_query(

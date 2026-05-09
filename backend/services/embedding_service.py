@@ -6,7 +6,7 @@ from backend.core.config import get_settings
 
 logger = structlog.get_logger()
 
-VOYAGE_MODEL = "voyage-3"
+VOYAGE_MODEL = "voyage-finance-2"
 VOYAGE_EMBED_URL = "https://api.voyageai.com/v1/embeddings"
 EMBEDDING_DIMENSIONS = 1024
 
