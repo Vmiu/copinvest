@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 
 from backend.core.config import get_settings
@@ -9,7 +10,9 @@ from backend.core.database import engine
 from backend.core.dependencies import init_clients
 from backend.models.base import Base
 from backend.repositories.vector_repo import get_qdrant_client, setup_collection
+from backend.routers.audit import router as audit_router
 from backend.routers.auth import router as auth_router
+from backend.routers.documents import router as documents_router
 from backend.routers.ingest import router as ingest_router
 from backend.routers.query import router as query_router
 
@@ -53,9 +56,20 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="CopInvest", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(auth_router)
 app.include_router(ingest_router)
 app.include_router(query_router)
+app.include_router(audit_router)
+app.include_router(documents_router)
 
 
 @app.get("/health")
