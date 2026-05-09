@@ -97,24 +97,21 @@ async def handle_action(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     # Approve or Discard — map callback data to AdviserAction enum values
     if action == "approve":
-        # final_response = llm_response (copy from audit record)
+        audit_action = "approved"
+        confirm_text = "Response approved and recorded."
         if trace_id:
             async with async_session() as db:
                 audit_row = await audit_repo.get_audit_by_id(db, trace_id)
                 final_response = audit_row.llm_response if audit_row else None
-        else:
-            final_response = None
-        audit_action = "approved"
-        confirm_text = "Response approved and recorded."
+                await audit_repo.update_adviser_action(db, trace_id, audit_action, final_response)
+                await db.commit()
     else:  # discard
-        final_response = None
         audit_action = "discarded"
         confirm_text = "Response discarded."
-
-    if trace_id:
-        async with async_session() as db:
-            await audit_repo.update_adviser_action(db, trace_id, audit_action, final_response)
-            await db.commit()
+        if trace_id:
+            async with async_session() as db:
+                await audit_repo.update_adviser_action(db, trace_id, audit_action, None)
+                await db.commit()
 
     await callback.message.reply_text(confirm_text)
     return ConversationHandler.END
