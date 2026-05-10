@@ -41,6 +41,21 @@ class AuditListItem(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SessionListItem(BaseModel):
+    session_id: str
+    user_id: str
+    query_count: int
+    started_at: str
+    last_activity: str
+
+
+class SessionListResponse(BaseModel):
+    items: list[SessionListItem]
+    total: int
+    page: int
+    limit: int
+
+
 class AuditListResponse(BaseModel):
     items: list[AuditListItem]
     total: int

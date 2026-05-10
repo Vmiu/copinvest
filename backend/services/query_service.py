@@ -75,6 +75,8 @@ async def process_query(
                 "source_id": pt.payload.get("source_id"),
                 "chunk_index": pt.payload.get("chunk_index"),
                 "section_title": pt.payload.get("section_title"),
+                "sensitivity_tier": pt.payload.get("sensitivity_tier"),
+                "text": pt.payload.get("text"),
             }
             for pt in chunks
         ])

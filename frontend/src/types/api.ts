@@ -1,3 +1,18 @@
+export interface SessionListItem {
+  session_id: string;
+  user_id: string;
+  query_count: number;
+  started_at: string;
+  last_activity: string;
+}
+
+export interface SessionListResponse {
+  items: SessionListItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export type AuditStatus = "received" | "retrieved" | "generated" | "completed" | "error";
 export type AdviserAction = "approved" | "edited" | "discarded";
 

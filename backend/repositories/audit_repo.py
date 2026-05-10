@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.audit_log import AuditLog
+from backend.models.audit_log import AuditLog, Session
 from backend.models.enums import AdviserAction
 
 
@@ -33,6 +33,37 @@ async def update_adviser_action(
     audit.adviser_edited = (action == "edited")
     audit.final_response = final_response
     await db.flush()
+
+
+async def list_sessions(
+    db: AsyncSession,
+    offset: int = 0,
+    limit: int = 25,
+) -> tuple[list[dict], int]:
+    stmt = (
+        select(
+            AuditLog.session_id,
+            AuditLog.user_id,
+            func.count(AuditLog.id).label("query_count"),
+            func.min(AuditLog.timestamp).label("started_at"),
+            func.max(AuditLog.timestamp).label("last_activity"),
+        )
+        .group_by(AuditLog.session_id, AuditLog.user_id)
+        .order_by(func.max(AuditLog.timestamp).desc())
+    )
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await db.execute(count_stmt)).scalar_one()
+    rows = (await db.execute(stmt.offset(offset).limit(limit))).all()
+    return [
+        {
+            "session_id": r.session_id,
+            "user_id": r.user_id,
+            "query_count": r.query_count,
+            "started_at": r.started_at.isoformat(),
+            "last_activity": r.last_activity.isoformat(),
+        }
+        for r in rows
+    ], total
 
 
 async def list_audits(

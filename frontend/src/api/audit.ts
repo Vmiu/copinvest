@@ -1,13 +1,15 @@
 import apiClient from "./client";
-import type { AuditDetailOut, AuditListResponse } from "../types/api";
+import type { AuditDetailOut, AuditListResponse, SessionListResponse } from "../types/api";
 
 export interface AuditListParams {
   page?: number;
   limit?: number;
-  user_id?: string;
   session_id?: string;
-  date_from?: string;
-  date_to?: string;
+}
+
+export async function fetchSessions(page = 1, limit = 25): Promise<SessionListResponse> {
+  const res = await apiClient.get<SessionListResponse>("/audit/sessions", { params: { page, limit } });
+  return res.data;
 }
 
 export async function fetchAuditList(params: AuditListParams = {}): Promise<AuditListResponse> {

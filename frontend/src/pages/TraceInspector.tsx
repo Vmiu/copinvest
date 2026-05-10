@@ -84,13 +84,18 @@ export default function TraceInspector() {
     );
   }
 
-  let parsedChunks: unknown = null;
+  interface Chunk {
+    source_id: string | null;
+    chunk_index: number | null;
+    section_title: string | null;
+    sensitivity_tier: number | null;
+    text: string | null;
+  }
+  let parsedChunks: Chunk[] = [];
   try {
     if (data.retrieved_chunks) parsedChunks = JSON.parse(data.retrieved_chunks);
-  } catch {
-    parsedChunks = null;
-  }
-  const chunkCount = Array.isArray(parsedChunks) ? parsedChunks.length : 0;
+  } catch { /* leave empty */ }
+  const chunkCount = parsedChunks.length;
 
   return (
     <div className="p-8">
@@ -118,12 +123,26 @@ export default function TraceInspector() {
         </TraceSection>
 
         <TraceSection label={`Retrieved Chunks (${chunkCount})`}>
-          {parsedChunks ? (
-            <pre className="font-mono text-xs text-neutral-300 whitespace-pre-wrap overflow-auto max-h-96">
-              {JSON.stringify(parsedChunks, null, 2)}
-            </pre>
-          ) : (
+          {parsedChunks.length === 0 ? (
             <p className="text-sm text-neutral-400">No chunks retrieved</p>
+          ) : (
+            <div className="space-y-4">
+              {parsedChunks.map((chunk, i) => (
+                <div key={i} className="border border-neutral-700 rounded p-3 space-y-2">
+                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-neutral-400">
+                    <span><span className="text-neutral-500">source</span> {chunk.source_id ?? "—"}</span>
+                    <span><span className="text-neutral-500">chunk</span> {chunk.chunk_index ?? "—"}</span>
+                    <span><span className="text-neutral-500">tier</span> {chunk.sensitivity_tier ?? "—"}</span>
+                    {chunk.section_title && (
+                      <span><span className="text-neutral-500">section</span> {chunk.section_title}</span>
+                    )}
+                  </div>
+                  <pre className="font-mono text-xs text-neutral-300 whitespace-pre-wrap overflow-auto max-h-48">
+                    {chunk.text ?? "—"}
+                  </pre>
+                </div>
+              ))}
+            </div>
           )}
         </TraceSection>
 

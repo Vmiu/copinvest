@@ -5,11 +5,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.core.database import get_db
 from backend.core.dependencies import require_role
 from backend.repositories import audit_repo
-from backend.schemas.audit import AuditDetailOut, AuditListResponse
+from backend.schemas.audit import AuditDetailOut, AuditListResponse, SessionListResponse
 
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/v1", tags=["audit"])
+
+
+@router.get("/audit/sessions", response_model=SessionListResponse)
+async def list_sessions(
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, ge=1, le=100),
+    current_user: dict = Depends(require_role("compliance")),
+    db: AsyncSession = Depends(get_db),
+):
+    offset = (page - 1) * limit
+    items, total = await audit_repo.list_sessions(db, offset=offset, limit=limit)
+    return SessionListResponse(items=items, total=total, page=page, limit=limit)
 
 
 @router.get("/audit", response_model=AuditListResponse)

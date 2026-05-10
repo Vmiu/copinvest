@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { ClipboardList, FolderOpen, Upload } from "lucide-react";
+import { ClipboardList, FolderOpen, Upload, LogOut } from "lucide-react";
 
 const navItems = [
   { label: "Audit Log", icon: ClipboardList, to: "/audit" },
@@ -7,11 +7,11 @@ const navItems = [
   { label: "Ingest Document", icon: Upload, to: "/ingest" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onLogout }: { onLogout: () => void }) {
   return (
-    <aside className="fixed left-0 top-0 h-screen w-60 bg-neutral-900 border-r border-neutral-800 flex flex-col">
-      <div className="h-16 flex items-center px-4 border-b border-neutral-800">
-        <span className="text-2xl font-semibold text-white">CopInvest</span>
+    <aside className="fixed left-0 top-0 h-screen w-60 bg-sidebar border-r border-sidebar-border flex flex-col">
+      <div className="h-16 flex items-center px-4 border-b border-sidebar-border">
+        <span className="text-2xl font-semibold text-sidebar-foreground">CopInvest</span>
       </div>
       <nav className="flex-1 py-2">
         {navItems.map(({ label, icon: Icon, to }) => (
@@ -22,8 +22,8 @@ export default function Sidebar() {
               [
                 "flex items-center gap-3 h-11 px-4 text-sm transition-colors",
                 isActive
-                  ? "border-l-[3px] border-indigo-500 text-indigo-500 bg-neutral-800"
-                  : "text-neutral-400 hover:bg-neutral-800 hover:text-white border-l-[3px] border-transparent",
+                  ? "border-l-[3px] border-sidebar-primary text-sidebar-primary bg-sidebar-accent"
+                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground border-l-[3px] border-transparent",
               ].join(" ")
             }
           >
@@ -32,6 +32,13 @@ export default function Sidebar() {
           </NavLink>
         ))}
       </nav>
+      <button
+        onClick={onLogout}
+        className="flex items-center gap-3 h-11 px-4 text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors border-t border-sidebar-border"
+      >
+        <LogOut className="h-4 w-4 shrink-0" />
+        <span>Sign out</span>
+      </button>
     </aside>
   );
 }
