@@ -1,27 +1,27 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: complete
-stopped_at: Phase 5 complete — all 5 phases done
-last_updated: "2026-05-10T15:10:00Z"
-last_activity: 2026-05-10
+milestone: v2.0
+milestone_name: v2.0
+status: planning
+stopped_at: v1.0 milestone archived — ready to plan v2.0
+last_updated: "2026-05-11T00:00:00Z"
+last_activity: 2026-05-11
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-29)
+See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** Advisers can ask a question and get an accurate, source-attributed answer from approved internal documents — with every interaction fully auditable.
-**Current focus:** Phase 4 planned — ready to execute (Telegram Bot, 3 plans)
+**Current focus:** Planning v2.0 — Meeting Briefs, Follow-Up Notes, Compliance Guardrails, Audit Hardening
 
 ## Current Position
 

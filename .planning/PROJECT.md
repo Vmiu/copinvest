@@ -2,55 +2,60 @@
 
 ## What This Is
 
-A GenAI assistant for investment advisers in Hong Kong that uses retrieval-augmented generation (RAG) over approved internal content to prepare meeting briefs, summarize product information, and draft compliant follow-up notes. It replaces the manual "tab-switching across CRM + portfolio system + Word + email" workflow with a single assistant that synthesizes context and generates first drafts for adviser review.
+A compliance-aware RAG assistant for investment advisers in Hong Kong. Advisers query it via Telegram to get source-attributed answers from approved internal documents (PDFs, Word, Excel). A React web dashboard gives compliance officers full audit trail visibility and document management. Every interaction is fully auditable from query through retrieval, generation, and adviser action.
 
 ## Core Value
 
-Advisers can ask a question about a client, product, or meeting and get an accurate, source-attributed answer drawn only from approved internal documents — with every interaction fully auditable.
+Advisers can ask a question and get an accurate, source-attributed answer drawn only from approved internal documents — with every interaction fully auditable.
 
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ RAG-powered Q&A over internal documents (PDFs, Word, Excel/CSV) — v1.0
+- ✓ Sensitivity-tiered document access (role-based permissions on retrieval) — v1.0
+- ✓ Full audit trail (every query, retrieved docs, generated output, adviser edits) — v1.0
+- ✓ Source attribution on all generated responses — v1.0
+- ✓ Telegram bot as primary adviser interface — v1.0 (promoted from secondary)
+- ✓ React web UI as audit/admin dashboard — v1.0 (scoped down from primary interface)
 
 ### Active
 
-- [ ] RAG-powered Q&A over internal documents (PDFs, Word, Excel/CSV)
-- [ ] Sensitivity-tiered document access (role-based permissions on retrieval)
-- [ ] Full audit trail (every query, retrieved docs, generated output, adviser edits)
-- [ ] Meeting brief generation from client context and internal docs
-- [ ] Product information summarization
-- [ ] Compliant follow-up note drafting
-- [ ] React web UI as primary adviser interface
-- [ ] Telegram bot as secondary channel for quick queries
-- [ ] Source attribution on all generated responses
+- [ ] Meeting brief generation from client context and internal docs (BRIEF-01, BRIEF-02)
+- [ ] Compliant follow-up note drafting (FOLLOW-01, FOLLOW-02)
+- [ ] Immutable append-only audit records with 7-year retention (AUDIT-V2-01, AUDIT-V2-03)
+- [ ] Adviser edit tracking with diff between AI draft and final sent version (AUDIT-V2-02)
+- [ ] Compliance guardrail layer — detect specific investment advice, price targets (COMP-01)
+- [ ] Faithfulness scoring — verify each claim traces to a retrieved chunk (COMP-02)
 
 ### Out of Scope
 
-- Multi-tenant SaaS — this is a personal prototype, single-firm architecture
-- Real-time portfolio data feeds — using internal static exports for now
+- Multi-tenant SaaS — personal prototype, single-firm architecture
+- Real-time portfolio data feeds — internal static exports only
 - Mobile native app — web + Telegram covers mobile access
-- Graph database (Neo4j) — starting vector-first, can add graph layer later
-- CRM write-back — read-only integration initially
-- Multi-LLM provider support — OpenAI only for v1
+- Graph database (Neo4j) — vector-first is sufficient; graph layer deferred
+- CRM write-back — read-only for now
+- Multi-LLM provider switching — provider mix already evolved (DeepSeek, Voyage AI, cohere)
+- Autonomous advice delivery — SFC requires human review; never auto-send AI output to clients
+- Open-ended internet search — mixing internal + external content destroys compliance boundary
 
 ## Context
 
-**Regulatory environment:** Hong Kong SFC (Securities and Futures Commission) guidelines govern how investment advice is documented and communicated. The audit trail must support demonstrating that advice was derived from approved materials.
+**Regulatory environment:** Hong Kong SFC guidelines govern how investment advice is documented. The audit trail must demonstrate that advice was derived from approved materials.
 
-**Current adviser workflow:** Advisers manually review CRM history, check financial plans, analyze portfolios, run compliance checks, build agendas from scratch, and assemble materials — often spending as much time preparing as conducting meetings. Follow-ups are ad-hoc emails and Word templates edited per client.
+**Current state (v1.0):** ~35,800 lines across Python backend and React frontend. Stack evolved from the original OpenAI-only plan: DeepSeek V4 for generation, Voyage AI for embeddings, cohere rerank-v3.5 for reranking, Qdrant for vector storage. docling handles PDF/Word/Excel parsing. Telegram is the primary adviser interface; React web UI is audit/admin only.
 
-**Data landscape:** All content is internal — product factsheets (PDF), compliance docs (Word), policy documents, meeting templates, and structured data (Excel/CSV). No third-party API integrations needed for v1.
-
-**Target users:** Personal prototype for a small group of advisers. Architecture should be clean enough to scale later but doesn't need multi-tenancy now.
+**Target users:** Small group of advisers at a single firm. Architecture is clean enough to scale but doesn't need multi-tenancy now.
 
 ## Constraints
 
-- **Tech stack**: Python (FastAPI) backend, React frontend, OpenAI for LLM
-- **Vector store**: ChromaDB or FAISS for embeddings with metadata-based permission filtering
+- **Tech stack**: Python (FastAPI) backend, React frontend
+- **LLM**: DeepSeek V4 Pro for generation, DeepSeek V4 Flash for query rewriting
+- **Embeddings**: Voyage AI (text-embedding-3-small was original plan; Voyage AI adopted during Phase 3)
+- **Reranking**: cohere rerank-v3.5 via OpenRouter
+- **Vector store**: Qdrant (pre-filtering enforces RBAC at DB layer)
 - **Deployment**: Local or single cloud VM — no container orchestration for v1
-- **Document formats**: Must handle PDF, Word (.docx), and Excel/CSV ingestion
+- **Document formats**: PDF, Word (.docx), Excel/CSV via docling
 - **Compliance**: All generated content must cite source documents; no hallucinated advice
 - **Auditability**: Full trace from query → retrieval → generation → adviser action
 
@@ -58,28 +63,17 @@ Advisers can ask a question about a client, product, or meeting and get an accur
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Vector-first retrieval (not graph DB) | Simpler for prototype; metadata filtering covers permission needs | — Pending |
-| OpenAI as LLM provider | Familiar ecosystem, good Python SDK, strong generation quality | — Pending |
-| React + FastAPI architecture | Clean separation of concerns; React for rich UI, FastAPI for async Python backend | — Pending |
-| Telegram as secondary channel | Advisers want quick mobile access but primary workflow is desktop web | — Pending |
-| Sensitivity tiers for RBAC | Document access driven by adviser seniority/role, not licence types | — Pending |
-
-## Evolution
-
-This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
+| Qdrant over ChromaDB/FAISS | Pre-filtering enforces RBAC at DB layer — correct security model | ✓ Good |
+| Audit trail in Phase 1 | SFC regulatory requirement; progressive lifecycle (received→retrieved→generated→completed) | ✓ Good |
+| Telegram as primary interface | Advisers want quick mobile access; inline keyboard for draft review is right UX | ✓ Good |
+| React web UI as audit/admin only | Separation of concerns; compliance officers get dedicated tool | ✓ Good |
+| docling for document parsing | Single library covers PDF/Word/Excel; structured markdown output ideal for RAG | ✓ Good |
+| DeepSeek V4 for generation | Strong instruction-following; compliance system prompt effective | ✓ Good |
+| Voyage AI for embeddings | Better retrieval quality for financial docs than text-embedding-3-small | ✓ Good |
+| cohere rerank-v3.5 | Cross-encoder reranking improves precision before generation | ✓ Good |
+| Vision-based PDF parser (pymupdf + qwen3-vl) | Added as spike for complex PDFs; integrated into ingestion pipeline | ✓ Good |
+| require_role() factory pattern | Reusable RBAC dependency across all endpoints | ✓ Good |
+| Progressive audit lifecycle | status enum transitions (received→retrieved→generated→completed) enable partial trace recovery | ✓ Good |
 
 ---
-*Last updated: 2026-04-29 after initialization*
+*Last updated: 2026-05-11 after v1.0 milestone*
