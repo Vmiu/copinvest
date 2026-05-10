@@ -15,8 +15,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Data Foundation** - Auth, RBAC, audit schema, and Qdrant/PostgreSQL infrastructure (completed 2026-04-29)
 - [x] **Phase 2: Document Ingestion** - Parse PDF/Word/Excel, chunk, tag metadata, embed into Qdrant (completed 2026-05-06)
 - [x] **Phase 3: RAG Query Pipeline** - Filtered retrieval, reranking, generation, audit logging (completed 2026-05-07)
-- [ ] **Phase 4: Telegram Bot** - Primary adviser interface: Q&A with source citations, draft review flow, action tracking
-- [ ] **Phase 5: Web Audit & Admin UI** - Audit log viewer, trace inspector, document registry, admin ingestion UI
+- [x] **Phase 4: Telegram Bot** - Primary adviser interface: Q&A with source citations, draft review flow, action tracking (completed 2026-05-09)
+- [x] **Phase 5: Web Audit & Admin UI** - Audit log viewer, trace inspector, document registry, admin ingestion UI (completed 2026-05-10)
 
 ## Phase Details
 
@@ -115,5 +115,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Data Foundation | 4/4 | Complete | 2026-04-29 |
 | 2. Document Ingestion | 4/4 | Complete | 2026-05-06 |
 | 3. RAG Query Pipeline | 3/3 | Complete | 2026-05-07 |
-| 4. Telegram Bot | 0/3 | Not started | - |
+| 4. Telegram Bot | 3/3 | Complete | 2026-05-09 |
 | 5. Web Audit & Admin UI | 3/3 | Complete | 2026-05-10 |

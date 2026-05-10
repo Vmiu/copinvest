@@ -49,10 +49,10 @@
 
 ### Web Audit & Admin UI
 
-- [ ] **UI-01**: Admin/compliance user can browse the audit log filtered by session, user, and date range
-- [ ] **UI-02**: Admin can open any audit record and view the full trace: query → retrieved chunks → prompt sent → LLM response → adviser action
-- [ ] **UI-03**: Admin can view the document registry showing all ingested documents with their sensitivity tier, chunk count, and ingestion date
-- [ ] **UI-04**: Admin can trigger document ingestion and assign sensitivity tiers through the UI without using the CLI
+- [x] **UI-01**: Admin/compliance user can browse the audit log filtered by session, user, and date range
+- [x] **UI-02**: Admin can open any audit record and view the full trace: query → retrieved chunks → prompt sent → LLM response → adviser action
+- [x] **UI-03**: Admin can view the document registry showing all ingested documents with their sensitivity tier, chunk count, and ingestion date
+- [x] **UI-04**: Admin can trigger document ingestion and assign sensitivity tiers through the UI without using the CLI
 
 ## v2 Requirements
 
@@ -124,13 +124,13 @@
 | RAG-04 | Phase 3 | Pending |
 | RAG-05 | Phase 3 | Pending |
 | TELE-01 | Phase 4 | Pending |
-| TELE-02 | Phase 4 | Pending |
-| TELE-03 | Phase 4 | Pending |
-| TELE-04 | Phase 4 | Pending |
-| UI-01 | Phase 5 | Pending |
-| UI-02 | Phase 5 | Pending |
-| UI-03 | Phase 5 | Pending |
-| UI-04 | Phase 5 | Pending |
+| TELE-02 | Phase 4 | Complete |
+| TELE-03 | Phase 4 | Complete |
+| TELE-04 | Phase 4 | Complete |
+| UI-01 | Phase 5 | Complete |
+| UI-02 | Phase 5 | Complete |
+| UI-03 | Phase 5 | Complete |
+| UI-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total
