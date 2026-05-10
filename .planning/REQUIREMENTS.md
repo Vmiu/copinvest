@@ -92,31 +92,31 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ROLE-01 | — | Pending |
-| AGENT-01 | — | Pending |
-| MCP-01 | — | Pending |
-| MCP-02 | — | Pending |
-| MCP-03 | — | Pending |
-| SKILL-01 | — | Pending |
-| SKILL-02 | — | Pending |
-| SKILL-03 | — | Pending |
-| BRIEF-01 | — | Pending |
-| BRIEF-02 | — | Pending |
-| FOLLOW-01 | — | Pending |
-| FOLLOW-02 | — | Pending |
-| TELE-01 | — | Pending |
-| PROM-01 | — | Pending |
-| PROM-02 | — | Pending |
-| META-01 | — | Pending |
-| AUDIT-V2-01 | — | Pending |
-| AUDIT-V2-02 | — | Pending |
-| AUDIT-V2-03 | — | Pending |
+| ROLE-01 | Phase 6 | Pending |
+| META-01 | Phase 7 | Pending |
+| AGENT-01 | Phase 8 | Pending |
+| MCP-01 | Phase 8 | Pending |
+| MCP-02 | Phase 8 | Pending |
+| MCP-03 | Phase 8 | Pending |
+| SKILL-01 | Phase 8 | Pending |
+| SKILL-02 | Phase 8 | Pending |
+| SKILL-03 | Phase 8 | Pending |
+| BRIEF-01 | Phase 9 | Pending |
+| BRIEF-02 | Phase 9 | Pending |
+| FOLLOW-01 | Phase 9 | Pending |
+| FOLLOW-02 | Phase 9 | Pending |
+| TELE-01 | Phase 9 | Pending |
+| PROM-01 | Phase 10 | Pending |
+| PROM-02 | Phase 10 | Pending |
+| AUDIT-V2-01 | Phase 10 | Pending |
+| AUDIT-V2-02 | Phase 10 | Pending |
+| AUDIT-V2-03 | Phase 10 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 19 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19/19 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-11*
-*Last updated: 2026-05-11 after initial definition*
+*Last updated: 2026-05-11 — traceability mapped after roadmap creation*

@@ -1,13 +1,13 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: v2.0
-status: planning
-stopped_at: v1.0 milestone archived — ready to plan v2.0
-last_updated: "2026-05-11T00:00:00Z"
+milestone_name: v2.0 Agent Skills & Audit Hardening
+status: ready
+stopped_at: v2.0 roadmap created — ready to plan Phase 6
+last_updated: "2026-05-11T18:35:00Z"
 last_activity: 2026-05-11
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,41 +21,36 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** Advisers can ask a question and get an accurate, source-attributed answer from approved internal documents — with every interaction fully auditable.
-**Current focus:** Planning v2.0 — Meeting Briefs, Follow-Up Notes, Compliance Guardrails, Audit Hardening
+**Current focus:** v2.0 — Phase 6: Role Consolidation (compliance → admin rename)
 
 ## Current Position
 
-Phase: 5 of 5 (Web Audit & Admin UI) — IN PROGRESS
-Plan: 3 of 3 in current phase
-Status: Complete
-Last activity: 2026-05-10
+Phase: 6 of 10 (Role Consolidation) — NOT STARTED
+Plan: — of ? in current phase
+Status: Roadmap complete, ready to execute
+Last activity: 2026-05-11
 
-Progress: [██████░░░░] 60%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v1.0 baseline):**
 
-- Total plans completed: 6
-- Average duration: 4.5min
-- Total execution time: 0.5 hours
+- Total plans completed: 17
+- Average duration: ~5min
+- Total execution time: ~1.5 hours
 
-**By Phase:**
+**By Phase (v1.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-data-foundation | 4 | 17min | 4.3min |
 | 02-document-ingestion | 4 | 28min | 7min |
-
-**Recent Trend:**
-
-- Last 5 plans: 6min, 3min, 3min, 15min, 6min
-- Trend: stable
+| 03-rag-query-pipeline | 3 | — | — |
+| 04-telegram-bot | 3 | — | — |
+| 05-web-audit-ui | 3 | — | — |
 
 *Updated after each plan completion*
-| Phase 05 P01 | 8m | 2 tasks | 8 files |
-| Phase 05 P02 | 4m | 2 tasks | 10 files |
-| Phase 05 P03 | 8m | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -90,25 +85,32 @@ Recent decisions affecting current work:
 - 02-04: ingested_at excluded from upsert update path — SQLAlchemy lambda default only fires on INSERT, not on Python object copy
 - 05-02: React pinned to ^18.3.1 — Vite scaffold installs React 19 by default
 - 05-02: Page components use lazy() — App.tsx compiles without page implementations; stubs replaced in Plan 05-03
-- [Phase ?]: All audit/documents endpoints require compliance role — advisers cannot access audit trail
+- v2.0 roadmap: compliance → admin rename is Phase 6 (own phase) — touches DB migration, enums, all require_role() call sites, frontend labels
+- v2.0 roadmap: META-01 is Phase 7 (own phase) — requires Qdrant payload schema change + DB migration + full re-ingestion
+- v2.0 roadmap: LangGraph + MCP tools + skills are Phase 8 (tightly coupled) — wraps existing services as tool nodes, minimal rewrite
+- v2.0 roadmap: Drafting pipelines (BRIEF + FOLLOW + TELE scoping) are Phase 9 — depend on agent+tools from Phase 8
+- v2.0 roadmap: Audit hardening + prompt versioning are Phase 10 — final hardening after pipelines are in place
+- v2.0 roadmap: SFC 7-year retention confirmed as AUDIT-V2-03 requirement
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
-- Open: Qdrant deployment mode (Docker vs in-process) — decide before Phase 1 execution
-- Open: SFC audit retention period (likely 7 years) — confirm from primary source before Phase 1
+None.
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| *(none)* | | | |
+| Compliance | COMP-01: investment advice detection | v3 | 2026-05-11 |
+| Compliance | COMP-02: faithfulness scoring | v3 | 2026-05-11 |
+| Agent | SESS-01: session-aware intent routing | v3 | 2026-05-11 |
 
 ## Session Continuity
 
-Last session: 2026-05-10T15:10:00Z
-Stopped at: Completed 05-03-PLAN.md
+Last session: 2026-05-11T18:35:00Z
+Stopped at: v2.0 roadmap created (Phases 6–10, 19/19 requirements mapped)
 Resume file: None
+Next action: `/gsd-plan-phase 6`
