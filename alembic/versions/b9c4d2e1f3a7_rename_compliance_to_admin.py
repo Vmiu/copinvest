@@ -4,6 +4,9 @@ Revision ID: b9c4d2e1f3a7
 Revises: a1b2c3d4e5f6
 Create Date: 2026-05-11
 
+WARNING: downgrade() is NOT safely reversible. Any user created as 'admin'
+after this migration was applied will be relabeled 'compliance' on rollback,
+regardless of whether they were originally a compliance user.
 """
 from typing import Sequence, Union
 from alembic import op
