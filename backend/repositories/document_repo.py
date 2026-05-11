@@ -31,8 +31,15 @@ async def upsert_document_record(db: AsyncSession, record: DocumentRecord) -> Do
     return record
 
 
-async def list_documents(db: AsyncSession) -> list[DocumentRecord]:
-    result = await db.execute(
-        select(DocumentRecord).order_by(DocumentRecord.ingested_at.desc())
-    )
+async def list_documents(
+    db: AsyncSession,
+    document_type: str | None = None,
+    jurisdiction: str | None = None,
+) -> list[DocumentRecord]:
+    q = select(DocumentRecord).order_by(DocumentRecord.ingested_at.desc())
+    if document_type:
+        q = q.where(DocumentRecord.document_type == document_type)
+    if jurisdiction:
+        q = q.where(DocumentRecord.jurisdiction == jurisdiction)
+    result = await db.execute(q)
     return list(result.scalars().all())
