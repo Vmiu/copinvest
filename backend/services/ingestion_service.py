@@ -52,6 +52,11 @@ async def ingest_document(
     openrouter_client: AsyncOpenAI,
     qdrant_client: QdrantClient,
     document_id: str | None = None,
+    document_type: str = "other",
+    language: str = "en",
+    jurisdiction: str = "global",
+    product_codes: list[str] | None = None,
+    parent_doc_title: str | None = None,
 ) -> dict:
     doc_id = document_id or str(uuid4())
     doc_type = _detect_doc_type(filename)
@@ -75,9 +80,11 @@ async def ingest_document(
 
     # 2. LLM chunking (DeepSeek)
     chunks = await chunking_service.chunk_document(markdown, chunking_client)
+    chunk_texts = [c["text"] for c in chunks]
+    chunk_meta = [{k: v for k, v in c.items() if k != "text"} for c in chunks]
 
     # 3. Embed chunks (sentence-transformers, client param unused but kept for API compat)
-    vectors = await embedding_service.embed_chunks(chunks, openrouter_client)
+    vectors = await embedding_service.embed_chunks(chunk_texts, openrouter_client)
 
     # 4. Upsert new chunks first (write-then-replace for atomicity — D-12)
     allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["admin"])
@@ -86,14 +93,21 @@ async def ingest_document(
         "doc_type": doc_type,
         "sensitivity_tier": sensitivity_tier.value,
         "allowed_roles": allowed_roles,
+        "document_type": document_type,
+        "language": language,
+        "jurisdiction": jurisdiction,
+        "product_codes": product_codes or [],
+        "parent_doc_title": parent_doc_title or filename,
     }
-    chunk_count, new_point_ids = vector_repo.upsert_chunks(qdrant_client, chunks, vectors, payload_base)
+    chunk_count, new_point_ids = vector_repo.upsert_chunks(
+        qdrant_client, chunk_texts, vectors, payload_base, chunk_metadata=chunk_meta
+    )
 
     # 4b. Only after new chunks are confirmed written, remove old ones
     vector_repo.delete_by_source_except_new(qdrant_client, doc_id, new_point_ids)
 
     # 5. Record in document registry (D-16)
-    total_chars = sum(len(c) for c in chunks)
+    total_chars = sum(len(c) for c in chunk_texts)
     elapsed_ms = int((time.monotonic() - start) * 1000)
 
     record = DocumentRecord(
@@ -107,6 +121,11 @@ async def ingest_document(
         parse_duration_ms=elapsed_ms,
         extraction_method="vision_v1",
         ingested_by=user_id,
+        document_type=document_type,
+        language=language,
+        jurisdiction=jurisdiction,
+        product_codes=json.dumps(product_codes) if product_codes else None,
+        parent_doc_title=parent_doc_title or filename,
     )
     await document_repo.upsert_document_record(db, record)
 
