@@ -1,3 +1,6 @@
+[tool.setuptools.packages.find]
+include = ["backend*"]
+
 [project]
 name = "copinvest"
 version = "0.1.0"
