@@ -118,9 +118,13 @@ async def _get_adviser_token(client: AsyncClient) -> str:
 
 
 # Shared mock data
-_MOCK_CHUNKS = ["Chunk 1 content about investments", "Chunk 2 content about compliance"]
+_MOCK_CHUNKS = [
+    {"text": "Chunk 1 content about investments", "page_number": 1, "section_heading": None, "is_table": False, "is_figure": False, "chunk_position": "first", "total_chunks_in_doc": 2},
+    {"text": "Chunk 2 content about compliance", "page_number": 1, "section_heading": None, "is_table": False, "is_figure": False, "chunk_position": "last", "total_chunks_in_doc": 2},
+]
 _MOCK_VECTORS = [[0.1] * 1024, [0.2] * 1024]
 _MOCK_MARKDOWN = "# Sample Document\n\nThis is test content.\n\n---\n\nMore test content."
+_INGEST_META = {"document_type": "pdf", "language": "en", "jurisdiction": "hk"}
 
 
 def _ingest_patches():
@@ -177,7 +181,7 @@ async def test_ingest_pdf_success(ingest_client, admin_user, qdrant_memory):
         resp = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("report.pdf", io.BytesIO(pdf_content), "application/pdf")},
-            data={"sensitivity_tier": "1"},
+            data={"sensitivity_tier": "1", **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -216,7 +220,7 @@ async def test_ingest_docx_success(ingest_client, admin_user, qdrant_memory):
         resp = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("brief.docx", io.BytesIO(docx_content), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
-            data={"sensitivity_tier": "2"},
+            data={"sensitivity_tier": "2", **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -252,7 +256,7 @@ async def test_ingest_csv_success(ingest_client, admin_user, qdrant_memory):
         resp = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("portfolio.csv", io.BytesIO(csv_content), "text/csv")},
-            data={"sensitivity_tier": "1"},
+            data={"sensitivity_tier": "1", **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -305,7 +309,7 @@ async def test_ingest_sensitivity_tier_stored(ingest_client, admin_user, qdrant_
         resp = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("restricted.pdf", io.BytesIO(b"%PDF restricted"), "application/pdf")},
-            data={"sensitivity_tier": "3"},
+            data={"sensitivity_tier": "3", **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -357,7 +361,7 @@ async def test_ingest_chunks_have_metadata(ingest_client, admin_user, qdrant_mem
         resp = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("meta.pdf", io.BytesIO(b"%PDF meta"), "application/pdf")},
-            data={"sensitivity_tier": "1"},
+            data={"sensitivity_tier": "1", **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -391,7 +395,11 @@ async def test_reingest_replaces_chunks(ingest_client, admin_user, qdrant_memory
     token = await _get_admin_token(ingest_client)
     doc_id = "test-reingest-doc"
 
-    first_chunks = ["First ingestion chunk A", "First ingestion chunk B", "First ingestion chunk C"]
+    first_chunks = [
+        {"text": "First ingestion chunk A", "page_number": 1, "section_heading": None, "is_table": False, "is_figure": False, "chunk_position": "first", "total_chunks_in_doc": 3},
+        {"text": "First ingestion chunk B", "page_number": 1, "section_heading": None, "is_table": False, "is_figure": False, "chunk_position": "middle", "total_chunks_in_doc": 3},
+        {"text": "First ingestion chunk C", "page_number": 1, "section_heading": None, "is_table": False, "is_figure": False, "chunk_position": "last", "total_chunks_in_doc": 3},
+    ]
     first_vectors = [[0.1] * 1024, [0.2] * 1024, [0.3] * 1024]
 
     with patch(
@@ -413,14 +421,17 @@ async def test_reingest_replaces_chunks(ingest_client, admin_user, qdrant_memory
         resp1 = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("doc.pdf", io.BytesIO(b"%PDF v1"), "application/pdf")},
-            data={"sensitivity_tier": "1", "document_id": doc_id},
+            data={"sensitivity_tier": "1", "document_id": doc_id, **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp1.status_code == 201, resp1.text
     assert resp1.json()["chunk_count"] == 3
 
     # Second ingestion with same document_id — 2 chunks
-    second_chunks = ["Second ingestion chunk X", "Second ingestion chunk Y"]
+    second_chunks = [
+        {"text": "Second ingestion chunk X", "page_number": 1, "section_heading": None, "is_table": False, "is_figure": False, "chunk_position": "first", "total_chunks_in_doc": 2},
+        {"text": "Second ingestion chunk Y", "page_number": 1, "section_heading": None, "is_table": False, "is_figure": False, "chunk_position": "last", "total_chunks_in_doc": 2},
+    ]
     second_vectors = [[0.4] * 1024, [0.5] * 1024]
 
     with patch(
@@ -442,7 +453,7 @@ async def test_reingest_replaces_chunks(ingest_client, admin_user, qdrant_memory
         resp2 = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("doc.pdf", io.BytesIO(b"%PDF v2"), "application/pdf")},
-            data={"sensitivity_tier": "1", "document_id": doc_id},
+            data={"sensitivity_tier": "1", "document_id": doc_id, **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp2.status_code == 201, resp2.text
@@ -488,7 +499,7 @@ async def test_ingest_document_id_optional(ingest_client, admin_user, qdrant_mem
         resp = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("anon.pdf", io.BytesIO(b"%PDF anon"), "application/pdf")},
-            data={"sensitivity_tier": "1"},
+            data={"sensitivity_tier": "1", **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
 
@@ -529,14 +540,14 @@ async def test_ingest_quality_metrics(ingest_client, admin_user, qdrant_memory):
         resp = await ingest_client.post(
             "/api/v1/ingest",
             files={"file": ("metrics.pdf", io.BytesIO(b"%PDF metrics"), "application/pdf")},
-            data={"sensitivity_tier": "1"},
+            data={"sensitivity_tier": "1", **_INGEST_META},
             headers={"Authorization": f"Bearer {token}"},
         )
 
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["chunk_count"] == len(_MOCK_CHUNKS)
-    assert body["total_chars"] == sum(len(c) for c in _MOCK_CHUNKS)
+    assert body["total_chars"] == sum(len(c["text"]) for c in _MOCK_CHUNKS)
     assert body["parse_duration_ms"] >= 0
 
 
@@ -551,7 +562,7 @@ async def test_ingest_unsupported_file_type(ingest_client, admin_user, qdrant_me
     resp = await ingest_client.post(
         "/api/v1/ingest",
         files={"file": ("notes.txt", io.BytesIO(b"plain text content"), "text/plain")},
-        data={"sensitivity_tier": "1"},
+        data={"sensitivity_tier": "1", **_INGEST_META},
         headers={"Authorization": f"Bearer {token}"},
     )
 
@@ -569,7 +580,7 @@ async def test_ingest_empty_file(ingest_client, admin_user, qdrant_memory):
     resp = await ingest_client.post(
         "/api/v1/ingest",
         files={"file": ("empty.pdf", io.BytesIO(b""), "application/pdf")},
-        data={"sensitivity_tier": "1"},
+        data={"sensitivity_tier": "1", **_INGEST_META},
         headers={"Authorization": f"Bearer {token}"},
     )
 
