@@ -47,6 +47,21 @@ def setup_collection(
         field_name="source_id",
         field_schema=PayloadSchemaType.KEYWORD,
     )
+    client.create_payload_index(
+        collection_name=name,
+        field_name="document_type",
+        field_schema=PayloadSchemaType.KEYWORD,
+    )
+    client.create_payload_index(
+        collection_name=name,
+        field_name="is_table",
+        field_schema=PayloadSchemaType.BOOL,
+    )
+    client.create_payload_index(
+        collection_name=name,
+        field_name="is_figure",
+        field_schema=PayloadSchemaType.BOOL,
+    )
 
 
 def query_with_rbac(
@@ -79,6 +94,7 @@ def upsert_chunks(
     chunks: list[str],
     vectors: list[list[float]],
     payload_base: dict,
+    chunk_metadata: list[dict] | None = None,
     collection: str | None = None,
 ) -> tuple[int, list[str]]:
     """Upsert chunks and return (count, list_of_point_ids)."""
@@ -89,7 +105,12 @@ def upsert_chunks(
         PointStruct(
             id=point_id,
             vector=vector,
-            payload={**payload_base, "chunk_index": i, "text": chunk},
+            payload={
+                **payload_base,
+                "chunk_index": i,
+                "text": chunk,
+                **(chunk_metadata[i] if chunk_metadata else {}),
+            },
         )
         for i, (point_id, chunk, vector) in enumerate(zip(point_ids, chunks, vectors))
     ]
