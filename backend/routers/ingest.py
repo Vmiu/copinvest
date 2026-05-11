@@ -22,6 +22,11 @@ async def ingest_document(
     file: UploadFile = File(...),
     sensitivity_tier: SensitivityTier = Form(...),
     document_id: str | None = Form(None),
+    document_type: str = Form(...),
+    language: str = Form(...),
+    jurisdiction: str = Form(...),
+    product_codes: str | None = Form(None),
+    parent_doc_title: str | None = Form(None),
     current_user: dict = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
     chunking_client: AsyncOpenAI = Depends(get_chunking_client),
@@ -37,6 +42,8 @@ async def ingest_document(
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
 
+    codes = [c.strip() for c in product_codes.split(",") if c.strip()] if product_codes else []
+
     try:
         result = await ingestion_service.ingest_document(
             db=db,
@@ -48,6 +55,11 @@ async def ingest_document(
             openrouter_client=openrouter_client,
             qdrant_client=qdrant_client,
             document_id=document_id,
+            document_type=document_type,
+            language=language,
+            jurisdiction=jurisdiction,
+            product_codes=codes,
+            parent_doc_title=parent_doc_title,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
