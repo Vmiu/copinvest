@@ -22,7 +22,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 ### 📋 v2.0 Agent Skills & Audit Hardening
 
-- [ ] **Phase 6: Role Consolidation** — Rename `compliance` → `admin` across DB, enums, RBAC guards, and frontend
+- [x] **Phase 6: Role Consolidation** — Rename `compliance` → `admin` across DB, enums, RBAC guards, and frontend (3/3 plans) — completed 2026-05-11
 - [ ] **Phase 7: Chunk Metadata Enrichment** — Add 11 metadata fields to Qdrant payload schema, DB registry, and re-ingest all documents
 - [ ] **Phase 8: Agent Framework & Skills** — LangGraph StateGraph wraps existing services as tool nodes; skills system with per-message intent classification
 - [ ] **Phase 9: Drafting Pipelines** — Meeting brief and follow-up note .docx generation with Telegram Approve/Edit/Discard; Q&A scoped to inline-only
@@ -40,9 +40,9 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
   3. Existing adviser and senior_adviser tokens continue to work without re-issue
 **Plans**: 3 plans
 Plans:
-- [ ] 06-01-PLAN.md — DB migration + Python enum & backend call sites
-- [ ] 06-02-PLAN.md — Qdrant migration script, seed data, frontend constants
-- [ ] 06-03-PLAN.md — Test suite updates
+- [x] 06-01-PLAN.md — DB migration + Python enum & backend call sites
+- [x] 06-02-PLAN.md — Qdrant migration script, seed data, frontend constants
+- [x] 06-03-PLAN.md — Test suite updates
 
 ### Phase 7: Chunk Metadata Enrichment
 **Goal**: Every chunk in Qdrant carries the 11 enriched metadata fields; the document registry reflects the new schema
@@ -99,7 +99,7 @@ Plans:
 | 3. RAG Query Pipeline | v1.0 | 3/3 | ✓ Complete | 2026-05-07 |
 | 4. Telegram Bot | v1.0 | 3/3 | ✓ Complete | 2026-05-09 |
 | 5. Web Audit & Admin UI | v1.0 | 3/3 | ✓ Complete | 2026-05-10 |
-| 6. Role Consolidation | v2.0 | 0/? | Not started | — |
+| 6. Role Consolidation | v2.0 | 3/3 | ✓ Complete | 2026-05-11 |
 | 7. Chunk Metadata Enrichment | v2.0 | 0/? | Not started | — |
 | 8. Agent Framework & Skills | v2.0 | 0/? | Not started | — |
 | 9. Drafting Pipelines | v2.0 | 0/? | Not started | — |
