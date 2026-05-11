@@ -36,6 +36,8 @@ export default function DocumentRegistry() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tierFilter, setTierFilter] = useState("all");
+  const [docTypeFilter, setDocTypeFilter] = useState("all");
+  const [jurisdictionFilter, setJurisdictionFilter] = useState("all");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   useEffect(() => {
@@ -47,14 +49,15 @@ export default function DocumentRegistry() {
 
   const items = useMemo<DocumentListItem[]>(() => {
     if (!data) return [];
-    const filtered = tierFilter === "all"
-      ? data.items
-      : data.items.filter(i => i.sensitivity_tier === parseInt(tierFilter));
+    let filtered = data.items;
+    if (tierFilter !== "all") filtered = filtered.filter(i => i.sensitivity_tier === parseInt(tierFilter));
+    if (docTypeFilter !== "all") filtered = filtered.filter(i => i.document_type === docTypeFilter);
+    if (jurisdictionFilter !== "all") filtered = filtered.filter(i => i.jurisdiction === jurisdictionFilter);
     return [...filtered].sort((a, b) => {
       const diff = new Date(a.ingested_at).getTime() - new Date(b.ingested_at).getTime();
       return sortDir === "asc" ? diff : -diff;
     });
-  }, [data, tierFilter, sortDir]);
+  }, [data, tierFilter, docTypeFilter, jurisdictionFilter, sortDir]);
 
   return (
     <div className="p-8">
@@ -74,6 +77,31 @@ export default function DocumentRegistry() {
             <SelectItem value="4">Confidential</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={docTypeFilter} onValueChange={v => setDocTypeFilter(v ?? "all")}>
+          <SelectTrigger className="w-44 bg-neutral-800 border-neutral-700 text-white">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="factsheet">Factsheet</SelectItem>
+            <SelectItem value="compliance_doc">Compliance Document</SelectItem>
+            <SelectItem value="meeting_template">Meeting Template</SelectItem>
+            <SelectItem value="research_report">Research Report</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={jurisdictionFilter} onValueChange={v => setJurisdictionFilter(v ?? "all")}>
+          <SelectTrigger className="w-36 bg-neutral-800 border-neutral-700 text-white">
+            <SelectValue placeholder="All jurisdictions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="HK">Hong Kong</SelectItem>
+            <SelectItem value="SG">Singapore</SelectItem>
+            <SelectItem value="global">Global</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {error && (
@@ -87,6 +115,11 @@ export default function DocumentRegistry() {
           <TableRow>
             <TableHead>Filename</TableHead>
             <TableHead className="w-20">Type</TableHead>
+            <TableHead className="w-32">Doc Type</TableHead>
+            <TableHead className="w-16">Lang</TableHead>
+            <TableHead className="w-24">Jurisdiction</TableHead>
+            <TableHead className="w-40">Product Codes</TableHead>
+            <TableHead>Display Title</TableHead>
             <TableHead className="w-32">Sensitivity Tier</TableHead>
             <TableHead className="w-20 text-right">Chunks</TableHead>
             <TableHead
@@ -106,14 +139,23 @@ export default function DocumentRegistry() {
           {loading ? (
             Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>
-                {Array.from({ length: 6 }).map((_, j) => (
+                {Array.from({ length: 10 }).map((_, j) => (
                   <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                 ))}
               </TableRow>
             ))
+          ) : items.length === 0 && data && data.items.length > 0 ? (
+            <TableRow>
+              <TableCell colSpan={10}>
+                <div className="py-12 text-center">
+                  <p className="text-white font-semibold">No documents match the selected filters</p>
+                  <p className="text-neutral-400 text-sm mt-1">Try clearing the Document Type or Jurisdiction filter.</p>
+                </div>
+              </TableCell>
+            </TableRow>
           ) : items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6}>
+              <TableCell colSpan={10}>
                 <div className="py-12 text-center">
                   <p className="text-white font-semibold">No documents ingested</p>
                   <p className="text-neutral-400 text-sm mt-1">
@@ -133,6 +175,23 @@ export default function DocumentRegistry() {
                   {item.filename.length > 60 ? item.filename.slice(0, 60) + "…" : item.filename}
                 </TableCell>
                 <TableCell><Badge variant="secondary">{item.doc_type}</Badge></TableCell>
+                <TableCell>
+                  {item.document_type
+                    ? <Badge variant="secondary">{item.document_type}</Badge>
+                    : <span className="text-neutral-500">—</span>}
+                </TableCell>
+                <TableCell className="text-neutral-300 text-xs uppercase">{item.language ?? "—"}</TableCell>
+                <TableCell className="text-neutral-300 text-xs">{item.jurisdiction ?? "—"}</TableCell>
+                <TableCell className="text-neutral-300 text-xs">
+                  {item.product_codes.length > 0
+                    ? (() => { const s = item.product_codes.join(", "); return s.length > 30 ? s.slice(0, 30) + "…" : s; })()
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-neutral-300">
+                  {item.parent_doc_title
+                    ? (item.parent_doc_title.length > 50 ? item.parent_doc_title.slice(0, 50) + "…" : item.parent_doc_title)
+                    : "—"}
+                </TableCell>
                 <TableCell><TierBadge tier={item.sensitivity_tier} /></TableCell>
                 <TableCell className="text-right text-neutral-300">{item.chunk_count}</TableCell>
                 <TableCell className="text-neutral-300 text-xs">{formatTs(item.ingested_at)}</TableCell>
