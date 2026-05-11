@@ -62,13 +62,17 @@ async def ingest_document(
 
     # 1. Parse document (vision LLM for PDF, docling for everything else)
     suffix = Path(filename).suffix
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp.write(file_content)
         tmp.flush()
+        tmp_path = tmp.name
+    try:
         if doc_type == "pdf":
-            markdown = await document_parser.parse_pdf_vision(tmp.name, openrouter_client)
+            markdown = await document_parser.parse_pdf_vision(tmp_path, openrouter_client)
         else:
-            markdown = await asyncio.to_thread(document_parser.parse_docling, tmp.name)
+            markdown = await asyncio.to_thread(document_parser.parse_docling, tmp_path)
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
 
     if not markdown.strip():
         raise ValueError("Document parsed to empty content")

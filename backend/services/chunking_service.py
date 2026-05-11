@@ -62,8 +62,9 @@ async def _chunk_page(
     async with semaphore:
         for attempt in range(MAX_ATTEMPTS):
             try:
+                from backend.core.config import get_settings as _gs
                 response = await client.chat.completions.create(
-                    model="deepseek-v4-flash",
+                    model=_gs().chat_model,
                     messages=[
                         {"role": "system", "content": CHUNKING_PROMPT},
                         {"role": "user", "content": user_content},

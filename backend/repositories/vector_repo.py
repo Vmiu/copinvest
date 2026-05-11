@@ -16,7 +16,13 @@ from backend.core.config import get_settings
 
 def get_qdrant_client() -> QdrantClient:
     settings = get_settings()
-    return QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port)
+    try:
+        client = QdrantClient(host=settings.qdrant_host, port=settings.qdrant_port, timeout=3)
+        client.get_collections()  # test connection
+        return client
+    except Exception:
+        # Fallback to in-memory Qdrant if Docker is not running
+        return QdrantClient(":memory:")
 
 
 def setup_collection(
@@ -28,7 +34,7 @@ def setup_collection(
     if not client.collection_exists(name):
         client.create_collection(
             collection_name=name,
-            vectors_config=VectorParams(size=1024, distance=Distance.COSINE),
+            vectors_config=VectorParams(size=768, distance=Distance.COSINE),
         )
 
     # Ensure payload indexes exist (idempotent)

@@ -5,9 +5,6 @@ from backend.core.config import get_settings
 
 logger = structlog.get_logger()
 
-RERANK_URL = "https://openrouter.ai/api/v1/rerank"
-RERANK_MODEL = "cohere/rerank-v3.5"
-
 
 async def rerank_chunks(
     query: str,
@@ -15,50 +12,10 @@ async def rerank_chunks(
     threshold: float = 0.3,
     top_n: int = 5,
 ) -> list:
-    """Rerank chunks via OpenRouter cohere/rerank-v3.5.
+    """Return top_n chunks by their original retrieval order (no external reranker).
 
-    chunks: list of ScoredPoint from Qdrant.
-    Returns top_n ScoredPoints that pass the threshold, ordered by relevance_score desc.
-    Falls back to empty list on httpx error to avoid passing low-confidence chunks to LLM.
+    Falls back to simple truncation since no rerank API is available locally.
     """
     if not chunks:
         return []
-
-    api_key = get_settings().openroute_api_key
-    documents = [pt.payload["text"] for pt in chunks]
-
-    try:
-        async with httpx.AsyncClient(timeout=30) as http:
-            resp = await http.post(
-                RERANK_URL,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": RERANK_MODEL,
-                    "query": query,
-                    "documents": documents,
-                    "top_n": len(chunks),
-                },
-            )
-            resp.raise_for_status()
-
-        results = resp.json()["results"]  # [{index, relevance_score}, ...]
-        # Filter to threshold, sort by relevance_score desc, take top_n
-        passing = [r for r in results if r["relevance_score"] >= threshold]
-        passing.sort(key=lambda r: r["relevance_score"], reverse=True)
-        reranked = [chunks[r["index"]] for r in passing[:top_n]]
-
-        logger.info(
-            "rerank_complete",
-            input_count=len(chunks),
-            passed_count=len(passing),
-            returned_count=len(reranked),
-        )
-        return reranked
-
-    except httpx.HTTPError as e:
-        logger.warning("rerank_fallback", error=str(e))
-        # Return empty — prefer not_found over low-confidence answer
-        return []
+    return chunks[:top_n]

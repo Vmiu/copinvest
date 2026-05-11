@@ -6,38 +6,28 @@ from backend.core.config import get_settings
 
 logger = structlog.get_logger()
 
-VOYAGE_MODEL = "voyage-finance-2"
-VOYAGE_EMBED_URL = "https://api.voyageai.com/v1/embeddings"
-EMBEDDING_DIMENSIONS = 1024
+OLLAMA_EMBED_URL = "http://localhost:11434/api/embed"
 
 
 async def embed_chunks(chunks: list[str], client: AsyncOpenAI) -> list[list[float]]:
-    """Embed chunks using Voyage AI (client param kept for API compat, unused)."""
+    """Embed chunks using Ollama nomic-embed-text."""
     if not chunks:
         raise ValueError("embed_chunks called with empty chunk list")
 
     settings = get_settings()
-    async with httpx.AsyncClient(timeout=60) as http:
+    vectors = []
+    # Ollama /api/embed supports batch via list input
+    async with httpx.AsyncClient(timeout=120) as http:
         resp = await http.post(
-            VOYAGE_EMBED_URL,
-            headers={
-                "Authorization": f"Bearer {settings.voyage_api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": VOYAGE_MODEL,
-                "input": chunks,
-                "input_type": "document",
-            },
+            OLLAMA_EMBED_URL,
+            json={"model": settings.embedding_model, "input": chunks},
         )
         resp.raise_for_status()
 
-    data = resp.json()
-    vectors = [item["embedding"] for item in sorted(data["data"], key=lambda x: x["index"])]
+    vectors = resp.json()["embeddings"]
     logger.info(
         "embedding_complete",
         chunk_count=len(chunks),
         dimensions=len(vectors[0]) if vectors else 0,
-        tokens_used=data.get("usage", {}).get("total_tokens"),
     )
     return vectors

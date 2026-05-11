@@ -66,9 +66,21 @@ async def parse_pdf_vision(file_path: str, client: AsyncOpenAI) -> str:
 
 
 def parse_docling(file_path: str) -> str:
-    """Parse non-PDF files (docx, xlsx, csv) using docling."""
-    from docling.document_converter import DocumentConverter
+    """Parse non-PDF files (docx, xlsx, csv) using docling, with CSV fallback."""
+    if file_path.lower().endswith(".csv"):
+        import csv
+        with open(file_path, newline="", encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+        if not rows:
+            return ""
+        # Convert to markdown table
+        header = "| " + " | ".join(rows[0]) + " |"
+        sep = "| " + " | ".join("---" for _ in rows[0]) + " |"
+        body = "\n".join("| " + " | ".join(row) + " |" for row in rows[1:])
+        return f"{header}\n{sep}\n{body}"
 
+    from docling.document_converter import DocumentConverter
     converter = DocumentConverter()
     result = converter.convert(file_path)
     return result.document.export_to_markdown()

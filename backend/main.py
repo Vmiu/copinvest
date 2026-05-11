@@ -27,16 +27,16 @@ async def lifespan(app: FastAPI):
 
     settings = get_settings()
     chunking_client = AsyncOpenAI(
-        api_key=settings.deepseek_api_key,
-        base_url="https://api.deepseek.com/v1",
+        api_key="ollama",
+        base_url=settings.ollama_base_url,
     )
     generation_client = AsyncOpenAI(
-        api_key=settings.deepseek_api_key,
-        base_url="https://api.deepseek.com/v1",
+        api_key="ollama",
+        base_url=settings.ollama_base_url,
     )
     openrouter_client = AsyncOpenAI(
-        api_key=settings.openroute_api_key,
-        base_url="https://openrouter.ai/api/v1",
+        api_key="ollama",
+        base_url=settings.ollama_base_url,
     )
     qdrant_client = get_qdrant_client()
     init_clients(chunking_client, openrouter_client, qdrant_client, generation_client)

@@ -17,8 +17,9 @@ async def rewrite_query(query: str, client: AsyncOpenAI) -> str:
     not a blocker.
     """
     try:
+        from backend.core.config import get_settings as _gs
         response = await client.chat.completions.create(
-            model="deepseek-v4-flash",
+            model=_gs().chat_model,
             messages=[
                 {"role": "system", "content": REWRITE_PROMPT},
                 {"role": "user", "content": query},

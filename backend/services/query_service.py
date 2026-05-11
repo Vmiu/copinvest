@@ -13,8 +13,7 @@ from backend.services import audit_service, generation_service, query_rewrite_se
 
 logger = structlog.get_logger()
 
-VOYAGE_EMBED_URL = "https://api.voyageai.com/v1/embeddings"
-VOYAGE_MODEL = "voyage-finance-2"
+OLLAMA_EMBED_URL = "http://localhost:11434/api/embed"
 
 
 async def process_query(
@@ -45,22 +44,18 @@ async def process_query(
         # 3. Query rewrite
         rewritten = await query_rewrite_service.rewrite_query(query, chunking_client)
 
-        # 4. Embed query (input_type: "query" for retrieval, not "document")
+        # 4. Embed query via Ollama
+        settings = get_settings()
         async with httpx.AsyncClient(timeout=60) as http:
             resp = await http.post(
-                VOYAGE_EMBED_URL,
-                headers={
-                    "Authorization": f"Bearer {get_settings().voyage_api_key}",
-                    "Content-Type": "application/json",
-                },
+                OLLAMA_EMBED_URL,
                 json={
-                    "model": VOYAGE_MODEL,
-                    "input": [rewritten],
-                    "input_type": "query",
+                    "model": settings.embedding_model,
+                    "input": rewritten,
                 },
             )
             resp.raise_for_status()
-        query_vector = resp.json()["data"][0]["embedding"]
+        query_vector = resp.json()["embeddings"][0]
 
         # 5. Retrieve from Qdrant (sync client wrapped in asyncio.to_thread)
         results = await asyncio.to_thread(
