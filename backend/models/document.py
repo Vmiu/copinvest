@@ -24,3 +24,8 @@ class DocumentRecord(Base):
         default=lambda: datetime.now(timezone.utc),
     )
     ingested_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"))
+    document_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    jurisdiction: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    product_codes: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array stored as text
+    parent_doc_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
