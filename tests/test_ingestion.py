@@ -585,3 +585,130 @@ async def test_ingest_empty_file(ingest_client, admin_user, qdrant_memory):
     )
 
     assert resp.status_code == 400, resp.text
+
+
+# ---------------------------------------------------------------------------
+# META-01: All 11 metadata fields in Qdrant payload
+# ---------------------------------------------------------------------------
+
+async def test_ingest_stores_11_metadata_fields(ingest_client, admin_user, qdrant_memory):
+    """POST /ingest stores all 11 META-01 fields in Qdrant payload."""
+    token = await _get_admin_token(ingest_client)
+
+    with patch("backend.services.document_parser.parse_docling", return_value="<!-- Page 1 -->\n## Fund Overview\nThis is a factsheet."), \
+         patch("backend.services.chunking_service.chunk_document", new_callable=AsyncMock) as mock_chunk, \
+         patch("backend.services.embedding_service.embed_chunks", new_callable=AsyncMock) as mock_embed:
+
+        mock_chunk.return_value = [
+            {
+                "text": "This is a factsheet.",
+                "page_number": 1,
+                "section_heading": "Fund Overview",
+                "is_table": False,
+                "is_figure": False,
+                "chunk_position": "first",
+                "total_chunks_in_doc": 2,
+            },
+            {
+                "text": "| Fund | Return |\n|------|--------|\n| A | 5% |",
+                "page_number": 2,
+                "section_heading": "",
+                "is_table": True,
+                "is_figure": False,
+                "chunk_position": "last",
+                "total_chunks_in_doc": 2,
+            },
+        ]
+        mock_embed.return_value = [[0.1] * 1024, [0.2] * 1024]
+
+        data = {
+            "sensitivity_tier": "1",
+            "document_type": "factsheet",
+            "language": "en",
+            "jurisdiction": "HK",
+            "product_codes": "FUND001, FUND002",
+            "parent_doc_title": "Test Factsheet 2024",
+        }
+        files = {"file": ("test.docx", io.BytesIO(b"fake docx content"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+        resp = await ingest_client.post(
+            "/api/v1/ingest",
+            data=data,
+            files=files,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 201, resp.text
+
+    from backend.core.config import get_settings
+    settings = get_settings()
+    results, _ = qdrant_memory.scroll(
+        collection_name=settings.qdrant_collection,
+        limit=10,
+        with_payload=True,
+    )
+    assert len(results) == 2
+    payload = results[0].payload
+    required_fields = [
+        "page_number", "section_heading", "document_type", "language",
+        "jurisdiction", "product_codes", "is_table", "is_figure",
+        "chunk_position", "total_chunks_in_doc", "parent_doc_title",
+    ]
+    for field in required_fields:
+        assert field in payload, f"Missing field in Qdrant payload: {field}"
+
+    assert payload["document_type"] == "factsheet"
+    assert payload["language"] == "en"
+    assert payload["jurisdiction"] == "HK"
+    assert "FUND001" in payload["product_codes"]
+    assert payload["parent_doc_title"] == "Test Factsheet 2024"
+
+
+# ---------------------------------------------------------------------------
+# META-01: Idempotency — re-ingest same document_id produces no duplicates
+# ---------------------------------------------------------------------------
+
+async def test_ingest_idempotent_no_duplicate_chunks(ingest_client, admin_user, qdrant_memory):
+    """Re-ingesting same document_id produces same chunk count, no duplicates."""
+    token = await _get_admin_token(ingest_client)
+
+    with patch("backend.services.document_parser.parse_docling", return_value="<!-- Page 1 -->\nIdempotency test content."), \
+         patch("backend.services.chunking_service.chunk_document", new_callable=AsyncMock) as mock_chunk, \
+         patch("backend.services.embedding_service.embed_chunks", new_callable=AsyncMock) as mock_embed:
+
+        mock_chunk.return_value = [{
+            "text": "Idempotency test content.",
+            "page_number": 1, "section_heading": "", "is_table": False,
+            "is_figure": False, "chunk_position": "first", "total_chunks_in_doc": 1,
+        }]
+        mock_embed.return_value = [[0.5] * 1024]
+
+        data = {
+            "sensitivity_tier": "1",
+            "document_type": "other",
+            "language": "en",
+            "jurisdiction": "global",
+            "document_id": "idempotent-doc-001",
+        }
+        files = {"file": ("idem.docx", io.BytesIO(b"content"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+
+        resp1 = await ingest_client.post(
+            "/api/v1/ingest", data=data, files=files,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp1.status_code == 201, resp1.text
+
+        resp2 = await ingest_client.post(
+            "/api/v1/ingest", data=data, files=files,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp2.status_code == 201, resp2.text
+
+    from backend.core.config import get_settings
+    settings = get_settings()
+    filtered, _ = qdrant_memory.scroll(
+        collection_name=settings.qdrant_collection,
+        scroll_filter=Filter(
+            must=[FieldCondition(key="source_id", match=MatchValue(value="idempotent-doc-001"))]
+        ),
+        limit=100,
+    )
+    assert len(filtered) == 1  # idempotent — same chunk count after re-ingest
