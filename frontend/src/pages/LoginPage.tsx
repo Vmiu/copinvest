@@ -2,9 +2,6 @@ import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 
-const ADMIN_EMAIL = "carol@copinvest.hk";
-const ADMIN_PASSWORD = "admin123";
-
 interface Props {
   onLogin: (token: string) => void;
 }
@@ -17,10 +14,6 @@ export default function LoginPage({ onLogin }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      setError("Invalid credentials.");
-      return;
-    }
     setLoading(true);
     setError("");
     try {
@@ -35,7 +28,7 @@ export default function LoginPage({ onLogin }: Props) {
       localStorage.setItem("token", data.access_token);
       onLogin(data.access_token);
     } catch {
-      setError("Login failed. Please try again.");
+      setError("Invalid credentials.");
     } finally {
       setLoading(false);
     }
