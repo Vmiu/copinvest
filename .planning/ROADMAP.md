@@ -38,7 +38,11 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
   1. Admin user can log in and access all audit, document registry, and ingestion endpoints that previously required `compliance` role
   2. No endpoint, enum value, DB row, or frontend label contains the string `compliance` in a role context
   3. Existing adviser and senior_adviser tokens continue to work without re-issue
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 06-01-PLAN.md — DB migration + Python enum & backend call sites
+- [ ] 06-02-PLAN.md — Qdrant migration script, seed data, frontend constants
+- [ ] 06-03-PLAN.md — Test suite updates
 
 ### Phase 7: Chunk Metadata Enrichment
 **Goal**: Every chunk in Qdrant carries the 11 enriched metadata fields; the document registry reflects the new schema
