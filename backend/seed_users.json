@@ -1,5 +1,5 @@
 [
-  {"id": "user-001", "email": "alice@copinvest.hk", "password": "adviser123", "role": "adviser"},
-  {"id": "user-002", "email": "bob@copinvest.hk", "password": "senior123", "role": "senior_adviser"},
-  {"id": "user-003", "email": "carol@copinvest.hk", "password": "admin123", "role": "admin"}
+  {"id": "user-001", "email": "alice@copinvest.hk", "hashed_password": "$2b$12$nXbL4KS8JdoCuHkWkwyH4OCBX2uVvrU0LPjlYU/uRI1OjjNF1ob4G", "role": "adviser"},
+  {"id": "user-002", "email": "bob@copinvest.hk",   "hashed_password": "$2b$12$6ndQHIzT9dPlyVw34mdQ4eqiSjQsBImHUCsFK7hx9NuMUHi5CDs.W", "role": "senior_adviser"},
+  {"id": "user-003", "email": "carol@copinvest.hk", "hashed_password": "$2b$12$5DqCBY7s2KvBkOd254cp.e7kNWtjHuusnVoU3xGhh1tmaAGmD.cYW", "role": "admin"}
 ]

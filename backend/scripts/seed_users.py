@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 
 from backend.core.database import async_session, engine
-from backend.core.security import hash_password
 from backend.models.base import Base
 from backend.models.user import User
 
@@ -22,7 +21,7 @@ async def seed():
                 User(
                     id=u["id"],
                     email=u["email"],
-                    hashed_password=hash_password(u["password"]),
+                    hashed_password=u["hashed_password"],
                     role=u["role"],
                 )
             )
