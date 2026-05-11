@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 
-const COMPLIANCE_EMAIL = "carol@copinvest.hk";
-const COMPLIANCE_PASSWORD = "compliance123";
+const ADMIN_EMAIL = "carol@copinvest.hk";
+const ADMIN_PASSWORD = "admin123";
 
 interface Props {
   onLogin: (token: string) => void;
@@ -17,7 +17,7 @@ export default function LoginPage({ onLogin }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (email !== COMPLIANCE_EMAIL || password !== COMPLIANCE_PASSWORD) {
+    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
       setError("Invalid credentials.");
       return;
     }
