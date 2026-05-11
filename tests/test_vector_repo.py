@@ -30,10 +30,10 @@ def qdrant_client() -> QdrantClient:
     setup_collection(client, "test_docs")
 
     # Seed points per D-05:
-    # tier 1 (public): adviser, senior_adviser, compliance
-    # tier 2 (internal): senior_adviser, compliance
-    # tier 3 (restricted): senior_adviser, compliance
-    # tier 4 (confidential): compliance only
+    # tier 1 (public): adviser, senior_adviser, admin
+    # tier 2 (internal): senior_adviser, admin
+    # tier 3 (restricted): senior_adviser, admin
+    # tier 4 (confidential): admin only
     client.upsert(
         collection_name="test_docs",
         points=[
@@ -42,7 +42,7 @@ def qdrant_client() -> QdrantClient:
                 vector=_VECTORS[0],
                 payload={
                     "sensitivity_tier": 1,
-                    "allowed_roles": ["adviser", "senior_adviser", "compliance"],
+                    "allowed_roles": ["adviser", "senior_adviser", "admin"],
                     "text": "public doc",
                 },
             ),
@@ -51,7 +51,7 @@ def qdrant_client() -> QdrantClient:
                 vector=_VECTORS[1],
                 payload={
                     "sensitivity_tier": 2,
-                    "allowed_roles": ["senior_adviser", "compliance"],
+                    "allowed_roles": ["senior_adviser", "admin"],
                     "text": "internal doc",
                 },
             ),
@@ -60,7 +60,7 @@ def qdrant_client() -> QdrantClient:
                 vector=_VECTORS[2],
                 payload={
                     "sensitivity_tier": 3,
-                    "allowed_roles": ["senior_adviser", "compliance"],
+                    "allowed_roles": ["senior_adviser", "admin"],
                     "text": "restricted doc",
                 },
             ),
@@ -69,7 +69,7 @@ def qdrant_client() -> QdrantClient:
                 vector=_VECTORS[3],
                 payload={
                     "sensitivity_tier": 4,
-                    "allowed_roles": ["compliance"],
+                    "allowed_roles": ["admin"],
                     "text": "confidential doc",
                 },
             ),
@@ -92,7 +92,7 @@ def qdrant_client_restricted_only() -> QdrantClient:
                 vector=_VECTORS[2],
                 payload={
                     "sensitivity_tier": 3,
-                    "allowed_roles": ["senior_adviser", "compliance"],
+                    "allowed_roles": ["senior_adviser", "admin"],
                     "text": "restricted doc",
                 },
             ),
@@ -101,7 +101,7 @@ def qdrant_client_restricted_only() -> QdrantClient:
                 vector=_VECTORS[3],
                 payload={
                     "sensitivity_tier": 4,
-                    "allowed_roles": ["compliance"],
+                    "allowed_roles": ["admin"],
                     "text": "confidential doc",
                 },
             ),
@@ -133,10 +133,10 @@ def test_rbac_filter_senior(qdrant_client: QdrantClient):
     assert tiers == {1, 2, 3}
 
 
-def test_rbac_filter_compliance(qdrant_client: QdrantClient):
-    """Compliance query returns all tiers (1-4)."""
+def test_rbac_filter_admin(qdrant_client: QdrantClient):
+    """Admin query returns all tiers (1-4)."""
     results = query_with_rbac(
-        qdrant_client, _QUERY_VECTOR, "compliance", "test_docs"
+        qdrant_client, _QUERY_VECTOR, "admin", "test_docs"
     )
     assert len(results.points) == 4
 

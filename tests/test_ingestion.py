@@ -35,13 +35,13 @@ async def db_session_ingest():
 
 
 @pytest_asyncio.fixture
-async def compliance_user(db_session_ingest):
-    """User with compliance role in the test DB."""
+async def admin_user(db_session_ingest):
+    """User with admin role in the test DB."""
     user = User(
-        id="compliance-user-1",
-        email="compliance@test.hk",
-        hashed_password=hash_password("compliancepass"),
-        role="compliance",
+        id="admin-user-1",
+        email="admin@test.hk",
+        hashed_password=hash_password("adminpass"),
+        role="admin",
     )
     db_session_ingest.add(user)
     await db_session_ingest.commit()
@@ -97,11 +97,11 @@ async def ingest_client(db_session_ingest, qdrant_memory):
     app.dependency_overrides.clear()
 
 
-async def _get_compliance_token(client: AsyncClient) -> str:
-    """Login as compliance user and return JWT token."""
+async def _get_admin_token(client: AsyncClient) -> str:
+    """Login as admin user and return JWT token."""
     resp = await client.post(
         "/api/v1/auth/token",
-        data={"username": "compliance@test.hk", "password": "compliancepass"},
+        data={"username": "admin@test.hk", "password": "adminpass"},
     )
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return resp.json()["access_token"]
@@ -153,9 +153,9 @@ def _ingest_patches():
 # INGEST-01: PDF ingestion
 # ---------------------------------------------------------------------------
 
-async def test_ingest_pdf_success(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_pdf_success(ingest_client, admin_user, qdrant_memory):
     """INGEST-01: Upload a PDF file — 201 with correct doc_type and chunk_count."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     pdf_content = b"%PDF-1.4 minimal test pdf content"
     with patch(
@@ -192,9 +192,9 @@ async def test_ingest_pdf_success(ingest_client, compliance_user, qdrant_memory)
 # INGEST-02: DOCX ingestion
 # ---------------------------------------------------------------------------
 
-async def test_ingest_docx_success(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_docx_success(ingest_client, admin_user, qdrant_memory):
     """INGEST-02: Upload a .docx file — 201 with doc_type=docx."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     docx_content = b"PK\x03\x04 minimal docx content"
     with patch(
@@ -228,9 +228,9 @@ async def test_ingest_docx_success(ingest_client, compliance_user, qdrant_memory
 # INGEST-03: CSV ingestion
 # ---------------------------------------------------------------------------
 
-async def test_ingest_csv_success(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_csv_success(ingest_client, admin_user, qdrant_memory):
     """INGEST-03: Upload a CSV file — 201 with doc_type=csv."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     csv_content = b"name,value\nApple Inc,150.00\nGoogle,2800.00"
     with patch(
@@ -264,8 +264,8 @@ async def test_ingest_csv_success(ingest_client, compliance_user, qdrant_memory)
 # INGEST-04 / T-02-01: Role enforcement
 # ---------------------------------------------------------------------------
 
-async def test_ingest_requires_compliance_role(ingest_client, adviser_user, qdrant_memory):
-    """INGEST-04 / T-02-01: Non-compliance user receives 403."""
+async def test_ingest_requires_admin_role(ingest_client, adviser_user, qdrant_memory):
+    """INGEST-04 / T-02-01: Non-admin user receives 403."""
     token = await _get_adviser_token(ingest_client)
 
     resp = await ingest_client.post(
@@ -282,9 +282,9 @@ async def test_ingest_requires_compliance_role(ingest_client, adviser_user, qdra
 # INGEST-04 / INGEST-05: Sensitivity tier stored and RBAC roles assigned
 # ---------------------------------------------------------------------------
 
-async def test_ingest_sensitivity_tier_stored(ingest_client, compliance_user, qdrant_memory):
-    """INGEST-04 / INGEST-05: Sensitivity tier 3 maps to senior_adviser + compliance roles in Qdrant."""
-    token = await _get_compliance_token(ingest_client)
+async def test_ingest_sensitivity_tier_stored(ingest_client, admin_user, qdrant_memory):
+    """INGEST-04 / INGEST-05: Sensitivity tier 3 maps to senior_adviser + admin roles in Qdrant."""
+    token = await _get_admin_token(ingest_client)
 
     with patch(
         "backend.services.document_parser.parse_pdf_vision",
@@ -327,16 +327,16 @@ async def test_ingest_sensitivity_tier_stored(ingest_client, compliance_user, qd
     points = results[0]
     assert len(points) == len(_MOCK_CHUNKS)
     for pt in points:
-        assert set(pt.payload["allowed_roles"]) == {"senior_adviser", "compliance"}
+        assert set(pt.payload["allowed_roles"]) == {"senior_adviser", "admin"}
 
 
 # ---------------------------------------------------------------------------
 # INGEST-05: Chunk metadata payload
 # ---------------------------------------------------------------------------
 
-async def test_ingest_chunks_have_metadata(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_chunks_have_metadata(ingest_client, admin_user, qdrant_memory):
     """INGEST-05: Every Qdrant point has source_id, doc_type, sensitivity_tier, allowed_roles, chunk_index, text."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     with patch(
         "backend.services.document_parser.parse_pdf_vision",
@@ -386,9 +386,9 @@ async def test_ingest_chunks_have_metadata(ingest_client, compliance_user, qdran
 # D-12: Re-ingestion replaces chunks
 # ---------------------------------------------------------------------------
 
-async def test_reingest_replaces_chunks(ingest_client, compliance_user, qdrant_memory):
+async def test_reingest_replaces_chunks(ingest_client, admin_user, qdrant_memory):
     """D-12: Re-ingesting same document_id deletes old chunks and replaces with new ones."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
     doc_id = "test-reingest-doc"
 
     first_chunks = ["First ingestion chunk A", "First ingestion chunk B", "First ingestion chunk C"]
@@ -465,9 +465,9 @@ async def test_reingest_replaces_chunks(ingest_client, compliance_user, qdrant_m
 # D-14: Optional document_id — UUID generated when omitted
 # ---------------------------------------------------------------------------
 
-async def test_ingest_document_id_optional(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_document_id_optional(ingest_client, admin_user, qdrant_memory):
     """D-14: Omitting document_id generates a UUID in the response."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     with patch(
         "backend.services.document_parser.parse_pdf_vision",
@@ -506,9 +506,9 @@ async def test_ingest_document_id_optional(ingest_client, compliance_user, qdran
 # INGEST-08: Quality metrics in response
 # ---------------------------------------------------------------------------
 
-async def test_ingest_quality_metrics(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_quality_metrics(ingest_client, admin_user, qdrant_memory):
     """INGEST-08: Response includes chunk_count, total_chars, parse_duration_ms > 0."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     with patch(
         "backend.services.document_parser.parse_pdf_vision",
@@ -544,9 +544,9 @@ async def test_ingest_quality_metrics(ingest_client, compliance_user, qdrant_mem
 # Unsupported file type → 422
 # ---------------------------------------------------------------------------
 
-async def test_ingest_unsupported_file_type(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_unsupported_file_type(ingest_client, admin_user, qdrant_memory):
     """Unsupported file extension (.txt) returns HTTP 422."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     resp = await ingest_client.post(
         "/api/v1/ingest",
@@ -562,9 +562,9 @@ async def test_ingest_unsupported_file_type(ingest_client, compliance_user, qdra
 # Empty file → 400
 # ---------------------------------------------------------------------------
 
-async def test_ingest_empty_file(ingest_client, compliance_user, qdrant_memory):
+async def test_ingest_empty_file(ingest_client, admin_user, qdrant_memory):
     """Empty file upload returns HTTP 400."""
-    token = await _get_compliance_token(ingest_client)
+    token = await _get_admin_token(ingest_client)
 
     resp = await ingest_client.post(
         "/api/v1/ingest",

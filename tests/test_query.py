@@ -183,7 +183,7 @@ async def test_query_rbac_enforcement(async_client, auth_headers):
         )
     assert response.status_code == 200
     # Role must come from JWT, not from request body
-    assert captured_role["role"] in ("adviser", "senior_adviser", "compliance")
+    assert captured_role["role"] in ("adviser", "senior_adviser", "admin")
 
 
 @pytest.mark.asyncio
