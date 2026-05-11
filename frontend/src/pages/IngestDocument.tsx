@@ -14,15 +14,25 @@ export default function IngestDocument() {
   const [result, setResult] = useState<IngestResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tierValue, setTierValue] = useState("");
+  const [docTypeValue, setDocTypeValue] = useState("");
+  const [languageValue, setLanguageValue] = useState("");
+  const [jurisdictionValue, setJurisdictionValue] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const fileInput = form.elements.namedItem("file") as HTMLInputElement;
-    if (!fileInput.files?.[0] || !tierValue) return;
+    if (!fileInput.files?.[0] || !tierValue || !docTypeValue || !languageValue || !jurisdictionValue) return;
     const formData = new FormData();
     formData.append("file", fileInput.files[0]);
     formData.append("sensitivity_tier", tierValue);
+    formData.append("document_type", docTypeValue);
+    formData.append("language", languageValue);
+    formData.append("jurisdiction", jurisdictionValue);
+    const productCodesInput = (form.elements.namedItem("product_codes") as HTMLInputElement)?.value ?? "";
+    if (productCodesInput.trim()) formData.append("product_codes", productCodesInput.trim());
+    const displayTitleInput = (form.elements.namedItem("parent_doc_title") as HTMLInputElement)?.value ?? "";
+    if (displayTitleInput.trim()) formData.append("parent_doc_title", displayTitleInput.trim());
     setLoading(true);
     setError(null);
     setResult(null);
@@ -31,6 +41,9 @@ export default function IngestDocument() {
       setResult(res);
       form.reset();
       setTierValue("");
+      setDocTypeValue("");
+      setLanguageValue("");
+      setJurisdictionValue("");
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.detail ?? "Unknown error")
@@ -73,6 +86,83 @@ export default function IngestDocument() {
               <SelectItem value="4">Confidential</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Document Type */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-white">Document Type</label>
+          <Select value={docTypeValue} onValueChange={v => setDocTypeValue(v ?? "")} disabled={loading}>
+            <SelectTrigger className="w-full bg-neutral-800 border-neutral-700 text-white">
+              <SelectValue placeholder="Select document type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="factsheet">Factsheet</SelectItem>
+              <SelectItem value="compliance_doc">Compliance Document</SelectItem>
+              <SelectItem value="meeting_template">Meeting Template</SelectItem>
+              <SelectItem value="research_report">Research Report</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Language */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-white">Language</label>
+          <Select value={languageValue} onValueChange={v => setLanguageValue(v ?? "")} disabled={loading}>
+            <SelectTrigger className="w-full bg-neutral-800 border-neutral-700 text-white">
+              <SelectValue placeholder="Select language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="zh">Chinese</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Jurisdiction */}
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-white">Jurisdiction</label>
+          <Select value={jurisdictionValue} onValueChange={v => setJurisdictionValue(v ?? "")} disabled={loading}>
+            <SelectTrigger className="w-full bg-neutral-800 border-neutral-700 text-white">
+              <SelectValue placeholder="Select jurisdiction" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="HK">Hong Kong</SelectItem>
+              <SelectItem value="SG">Singapore</SelectItem>
+              <SelectItem value="global">Global</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Product Codes */}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="product_codes" className="text-sm font-medium text-white">Product Codes</label>
+          <input
+            id="product_codes"
+            name="product_codes"
+            type="text"
+            disabled={loading}
+            placeholder="e.g. HSBC001, FUND002"
+            aria-describedby="product-codes-hint"
+            className="rounded border border-neutral-700 bg-neutral-800 text-neutral-300 p-2 text-sm w-full"
+          />
+          <p id="product-codes-hint" className="text-xs text-neutral-400">Comma-separated. Leave blank if not applicable.</p>
+        </div>
+
+        {/* Display Title */}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="parent_doc_title" className="text-sm font-medium text-white">Display Title</label>
+          <input
+            id="parent_doc_title"
+            name="parent_doc_title"
+            type="text"
+            disabled={loading}
+            placeholder="e.g. HSBC Annual Report 2024"
+            aria-describedby="display-title-hint"
+            className="rounded border border-neutral-700 bg-neutral-800 text-neutral-300 p-2 text-sm w-full"
+          />
+          <p id="display-title-hint" className="text-xs text-neutral-400">Human-readable name shown in the document registry.</p>
         </div>
 
         <Button
