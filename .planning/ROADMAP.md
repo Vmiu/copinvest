@@ -23,7 +23,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 ### 📋 v2.0 Agent Skills & Audit Hardening
 
 - [x] **Phase 6: Role Consolidation** — Rename `compliance` → `admin` across DB, enums, RBAC guards, and frontend (3/3 plans) — completed 2026-05-11
-- [ ] **Phase 7: Chunk Metadata Enrichment** — Add 11 metadata fields to Qdrant payload schema, DB registry, and re-ingest all documents
+- [x] **Phase 7: Chunk Metadata Enrichment** — Add 11 metadata fields to Qdrant payload schema, DB registry, and re-ingest all documents (4/4 plans) — completed 2026-05-11
 - [ ] **Phase 8: Agent Framework & Skills** — LangGraph StateGraph wraps existing services as tool nodes; skills system with per-message intent classification
 - [ ] **Phase 9: Drafting Pipelines** — Meeting brief and follow-up note .docx generation with Telegram Approve/Edit/Discard; Q&A scoped to inline-only
 - [ ] **Phase 10: Audit Hardening & Prompt Versioning** — Immutable audit records, 7-year retention, edit diff storage, prompt/skill version tracking
@@ -52,8 +52,13 @@ Plans:
   1. After re-ingestion, a chunk retrieved via the query API includes `page_number`, `section_heading`, `document_type`, `language`, `jurisdiction`, `product_codes`, `is_table`, `is_figure`, `chunk_position`, `total_chunks_in_doc`, and `parent_doc_title` in its metadata
   2. Admin can filter the document registry by `document_type` and `jurisdiction` using the new fields
   3. Re-ingestion is idempotent — running it twice produces the same Qdrant payload with no duplicate chunks
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 4 plans
+**Status**: Complete — 2026-05-11
+Plans:
+- [x] 07-01-PLAN.md — DB migration + chunking service metadata extraction
+- [x] 07-02-PLAN.md — Ingestion service + vector repo wiring
+- [x] 07-03-PLAN.md — Frontend: extend ingest form + document registry
+- [x] 07-04-PLAN.md — Tests
 
 ### Phase 8: Agent Framework & Skills
 **Goal**: Queries are routed through a LangGraph StateGraph that classifies intent, loads the matching skill as system prompt, and dispatches to the correct internal tool
