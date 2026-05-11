@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/v1", tags=["audit"])
 async def list_sessions(
     page: int = Query(1, ge=1),
     limit: int = Query(25, ge=1, le=100),
-    current_user: dict = Depends(require_role("compliance")),
+    current_user: dict = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * limit
@@ -32,7 +32,7 @@ async def list_audit_logs(
     session_id: str | None = Query(None),
     date_from: str | None = Query(None),
     date_to: str | None = Query(None),
-    current_user: dict = Depends(require_role("compliance")),
+    current_user: dict = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * limit
@@ -52,7 +52,7 @@ async def list_audit_logs(
 @router.get("/audit/{trace_id}", response_model=AuditDetailOut)
 async def get_audit_detail(
     trace_id: str,
-    current_user: dict = Depends(require_role("compliance")),
+    current_user: dict = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
     record = await audit_repo.get_audit_by_id(db, trace_id)

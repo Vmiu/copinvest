@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/v1", tags=["documents"])
 
 @router.get("/documents", response_model=DocumentListResponse)
 async def list_documents(
-    current_user: dict = Depends(require_role("compliance")),
+    current_user: dict = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ):
     items = await document_repo.list_documents(db)

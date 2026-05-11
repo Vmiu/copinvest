@@ -22,7 +22,7 @@ async def ingest_document(
     file: UploadFile = File(...),
     sensitivity_tier: SensitivityTier = Form(...),
     document_id: str | None = Form(None),
-    current_user: dict = Depends(require_role("compliance")),
+    current_user: dict = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
     chunking_client: AsyncOpenAI = Depends(get_chunking_client),
     openrouter_client: AsyncOpenAI = Depends(get_openrouter_client),

@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/v1", tags=["query"])
 @router.post("/query", response_model=QueryResponse)
 async def query_documents(
     request: QueryRequest,
-    current_user: dict = Depends(require_role("adviser", "senior_adviser", "compliance")),
+    current_user: dict = Depends(require_role("adviser", "senior_adviser", "admin")),
     db: AsyncSession = Depends(get_db),
     chunking_client: AsyncOpenAI = Depends(get_chunking_client),
     generation_client: AsyncOpenAI = Depends(get_generation_client),

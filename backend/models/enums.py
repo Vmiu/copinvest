@@ -4,7 +4,7 @@ import enum
 class UserRole(str, enum.Enum):
     adviser = "adviser"
     senior_adviser = "senior_adviser"
-    compliance = "compliance"
+    admin = "admin"
 
 
 class SensitivityTier(int, enum.Enum):

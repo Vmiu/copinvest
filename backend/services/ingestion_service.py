@@ -18,10 +18,10 @@ from backend.services import chunking_service, document_parser, embedding_servic
 logger = structlog.get_logger()
 
 TIER_TO_ROLES: dict[int, list[str]] = {
-    SensitivityTier.public: ["adviser", "senior_adviser", "compliance"],
-    SensitivityTier.internal: ["senior_adviser", "compliance"],
-    SensitivityTier.restricted: ["senior_adviser", "compliance"],
-    SensitivityTier.confidential: ["compliance"],
+    SensitivityTier.public: ["adviser", "senior_adviser", "admin"],
+    SensitivityTier.internal: ["senior_adviser", "admin"],
+    SensitivityTier.restricted: ["senior_adviser", "admin"],
+    SensitivityTier.confidential: ["admin"],
 }
 
 DOC_TYPE_MAP: dict[str, str] = {
@@ -80,7 +80,7 @@ async def ingest_document(
     vectors = await embedding_service.embed_chunks(chunks, openrouter_client)
 
     # 4. Upsert new chunks first (write-then-replace for atomicity — D-12)
-    allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["compliance"])
+    allowed_roles = TIER_TO_ROLES.get(sensitivity_tier.value, ["admin"])
     payload_base = {
         "source_id": doc_id,
         "doc_type": doc_type,
