@@ -6,7 +6,7 @@ export async function fetchDocuments(): Promise<DocumentListResponse> {
   return res.data;
 }
 
-export async function ingestDocument(formData: FormData): Promise<IngestResponse> {
+export async function ingestDocument(formData: FormData, document_type?: string): Promise<IngestResponse> {
   const res = await apiClient.post<IngestResponse>("/ingest", formData, {
     timeout: 0,
     headers: { "Content-Type": "multipart/form-data" },

@@ -57,6 +57,11 @@ export interface DocumentListItem {
   chunk_count: number;
   ingested_at: string;
   ingested_by: string;
+  document_type: string | null;
+  language: string | null;
+  jurisdiction: string | null;
+  product_codes: string[];
+  parent_doc_title: string | null;
 }
 
 export interface DocumentListResponse {
