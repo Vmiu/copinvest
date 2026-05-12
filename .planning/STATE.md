@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: v2.0 Agent Skills & Audit Hardening
-status: ready
-stopped_at: Phase 7 complete — 4/4 plans, verification passed (12/12), ready for Phase 8
-last_updated: "2026-05-11T06:30:00Z"
-last_activity: 2026-05-11
+milestone: v3.0
+milestone_name: v3.0 Agent Workflows & Drafting Pipelines
+status: planning
+last_updated: "2026-05-12T18:21:23.454Z"
+last_activity: 2026-05-12
 progress:
-  total_phases: 5
-  completed_phases: 2
-  total_plans: 11
-  completed_plans: 7
-  percent: 40
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-11)
 
 **Core value:** Advisers can ask a question and get an accurate, source-attributed answer from approved internal documents — with every interaction fully auditable.
-**Current focus:** v2.0 — Phase 7: Chunk Metadata Enrichment — COMPLETE
+**Current focus:** v2.0 — Complete (Phases 6–7 shipped)
 
 ## Current Position
 
-Phase: 7 of 10 (Chunk Metadata Enrichment) — COMPLETE
-Plan: 4 of 4
-Status: Phase 7 complete — ready for Phase 8
-Last activity: 2026-05-11
-
-Progress: [██░░░░░░░░] 20%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-12 — Milestone v3.0 started
 
 ## Performance Metrics
 
@@ -87,10 +84,7 @@ Recent decisions affecting current work:
 - 05-02: Page components use lazy() — App.tsx compiles without page implementations; stubs replaced in Plan 05-03
 - v2.0 roadmap: compliance → admin rename is Phase 6 (own phase) — touches DB migration, enums, all require_role() call sites, frontend labels
 - v2.0 roadmap: META-01 is Phase 7 (own phase) — requires Qdrant payload schema change + DB migration + full re-ingestion
-- v2.0 roadmap: LangGraph + MCP tools + skills are Phase 8 (tightly coupled) — wraps existing services as tool nodes, minimal rewrite
-- v2.0 roadmap: Drafting pipelines (BRIEF + FOLLOW + TELE scoping) are Phase 9 — depend on agent+tools from Phase 8
-- v2.0 roadmap: Audit hardening + prompt versioning are Phase 10 — final hardening after pipelines are in place
-- v2.0 roadmap: SFC 7-year retention confirmed as AUDIT-V2-03 requirement
+- v2.0 roadmap: Phases 8–10 (Agent Framework, Drafting Pipelines, Audit Hardening) deferred to next milestone — needs workflow redesign
 
 ### Pending Todos
 
@@ -110,7 +104,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-11T18:35:00Z
-Stopped at: v2.0 roadmap created (Phases 6–10, 19/19 requirements mapped)
+Last session: 2026-05-13
+Stopped at: v2.0 milestone complete (Phases 6–7, 2/2 requirements shipped)
 Resume file: None
-Next action: `/gsd-plan-phase 6`
+Next action: Define next milestone (workflow redesign for agent + drafting + audit hardening)

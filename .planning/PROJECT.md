@@ -18,19 +18,22 @@ Advisers can ask a question and get an accurate, source-attributed answer drawn 
 - ✓ Source attribution on all generated responses — v1.0
 - ✓ Telegram bot as primary adviser interface — v1.0 (promoted from secondary)
 - ✓ React web UI as audit/admin dashboard — v1.0 (scoped down from primary interface)
+- ✓ Role consolidation (compliance → admin) — v2.0
+- ✓ Enriched chunk metadata (11 fields in Qdrant payload) — v2.0
 
 ### Active
 
-- [ ] Role consolidation: rename `compliance` → `admin`; three roles only: advisor, senior_advisor, admin (ROLE-01)
-- [ ] Internal MCP tool registry wrapping RAG query, brief generation, follow-up drafting (MCP-01, MCP-02, MCP-03)
-- [ ] Skills system: Markdown skill files with description field; per-message intent classification loads matching skill as system prompt (SKILL-01, SKILL-02, SKILL-03)
-- [ ] Meeting brief generation pipeline producing .docx output with adviser Approve/Edit/Discard in Telegram (BRIEF-01, BRIEF-02)
-- [ ] Compliant follow-up note drafting pipeline producing .docx output with adviser Approve/Edit/Discard in Telegram (FOLLOW-01, FOLLOW-02)
-- [ ] Telegram adviser action scoped to drafting pipelines only — Q&A and summarize return inline, no action required (TELE-01)
-- [ ] Prompt versioning: prompt templates versioned; each audit log entry records prompt_version and skill_version used (PROM-01, PROM-02)
-- [ ] Enriched chunk metadata: page number, section heading, table/figure flag, document type, language, jurisdiction, product codes, chunk position, total chunks, parent doc title (META-01)
-- [ ] Immutable append-only audit records with 7-year retention (AUDIT-V2-01, AUDIT-V2-03)
-- [ ] Adviser edit tracking with diff between AI draft and final sent version (AUDIT-V2-02)
+<!-- Current scope. Building toward these. -->
+
+- [ ] Prompt-driven agent: step-by-step workflow guides injected into system prompt; LLM decides tool usage, asks clarifying questions when needed (AGENT-01)
+- [ ] Client info retrieval: searchable by advisor_id + client name; mock JSON data for now, designed for future DB backend (CLIENT-01, CLIENT-02)
+- [ ] Meeting brief .docx pipeline: header/footer, sent via Telegram, saved to /draft/, file path logged in audit (BRIEF-01, BRIEF-02, BRIEF-03)
+- [ ] Follow-up note .docx pipeline: different header/footer, same save/log pattern (FOLLOW-01, FOLLOW-02, FOLLOW-03)
+- [ ] 4-mode freetext workflow: QA, meeting brief, follow-up note, chat — no explicit mode switching, intent inferred by LLM (WORKFLOW-01, WORKFLOW-02)
+- [ ] Tool-augmented audit logging: search_rag, search_client, draft_docx calls logged; full trace visible in React audit dashboard (AUDIT-V3-01, AUDIT-V3-02)
+- [ ] Prompt versioning: templates versioned; each audit log entry records prompt_version used (PROM-01, PROM-02)
+- [ ] Immutable append-only audit records with 7-year retention (AUDIT-V2-01)
+- [ ] Adviser edit tracking: diff between AI draft and final sent version (AUDIT-V2-02)
 
 ### Out of Scope
 
@@ -45,6 +48,9 @@ Advisers can ask a question and get an accurate, source-attributed answer drawn 
 - External MCP server — tool registry is internal only; not exposed to Claude Desktop or other MCP clients
 - Session-aware intent routing — per-message classification only for v2.0; multi-intent session handling deferred
 - Compliance guardrail layer (COMP-01) — deferred; faithfulness scoring (COMP-02) deferred
+- Internal MCP tool registry (MCP-01, MCP-02, MCP-03) — v2.0 LangGraph + MCP approach was messy/unsatisfying; replaced by simpler prompt-driven tool calls in v3.0
+- Skills system with per-message classification (SKILL-01, SKILL-02, SKILL-03) — v2.0 skill-loading approach failed; replaced by prompt-injected workflow guides in v3.0
+- LangGraph agent framework — v2.0 StateGraph wrapping services as tool nodes was unsatisfying; replaced by prompt-driven orchestration in v3.0
 
 ## Context
 
@@ -87,19 +93,34 @@ Advisers can ask a question and get an accurate, source-attributed answer drawn 
 | Adviser action scoped to drafting only | Q&A/summarize return inline; only brief+followup .docx pipelines trigger Approve/Edit/Discard | — Pending |
 | LangGraph as agent framework | StateGraph wraps existing services as tool nodes; best fit for skill routing without full rewrite | — Pending |
 
-## Current Milestone: v2.0 Agent Skills & Audit Hardening
+## Current Milestone: v3.0 Agent Workflows & Drafting Pipelines
 
-**Goal:** Evolve the RAG pipeline into a skill-guided agent with internal MCP tools, prompt versioning, enriched chunk metadata, corrected role model, and .docx drafting pipelines with scoped adviser actions.
+**Goal:** Replace the failed LangGraph/skill-classification approach with a simple prompt-driven agent that handles 4 modes (QA, meeting brief, follow-up note, chat) via freetext — extracting client info, searching RAG, and drafting .docx files with headers/footers, all fully audited.
 
 **Target features:**
-- Role consolidation (compliance → admin)
-- Internal MCP tool registry (RAG, brief, followup)
-- Skills system with per-message intent classification
-- Meeting brief + follow-up note .docx pipelines
-- Telegram adviser action scoped to drafting only
-- Prompt + skill versioning in audit log
-- Enriched chunk metadata (12 new fields)
-- Audit hardening (immutable records, 7-year retention, edit diff)
+- Prompt-driven agent with step-by-step workflow guides injected into system prompt
+- Client info retrieval by advisor_id + client name (mock JSON backend)
+- Meeting brief + follow-up note .docx pipelines with distinct headers/footers
+- Telegram delivery, /draft/ storage, file path in audit log
+- 4-mode freetext workflow — no explicit mode switching
+- Full audit coverage for all tool calls visible in React dashboard
+
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
 
 ---
-*Last updated: 2026-05-11 after v2.0 milestone start*
+*Last updated: 2026-05-13 after v3.0 milestone start*
