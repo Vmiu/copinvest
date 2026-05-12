@@ -1,122 +1,89 @@
 # Requirements: CopInvest
 
-**Defined:** 2026-05-11
+**Defined:** 2026-05-13
 **Core Value:** Advisers can ask a question and get an accurate, source-attributed answer drawn only from approved internal documents — with every interaction fully auditable.
 
-## v2.0 Requirements
+## v3 Requirements
 
-### Role Model
+Requirements for v3.0 Agent Workflows & Drafting Pipelines. Each maps to roadmap phases.
 
-- [ ] **ROLE-01**: Admin can access all endpoints previously restricted to `compliance` role (audit log, document registry, ingestion UI)
+### Agent Orchestration
 
-### Agent Framework
+- [ ] **AGENT-01**: Prompt-driven agent accepts freetext messages and routes to the appropriate workflow (QA / meeting brief / follow-up note / chat) without explicit mode switching
+- [ ] **AGENT-02**: Agent executes a tool-calling loop: call LLM with tools → execute tool calls → return results → loop until final answer, with a hard maximum of 5 tool calls per user message
+- [ ] **AGENT-03**: search_rag tool wraps the existing RAG query pipeline (query rewrite → embed → retrieve → rerank → generate) and returns source-attributed results with [N] citations
+- [ ] **AGENT-04**: draft_docx tool accepts structured content and document type (brief/follow-up), calls the appropriate builder, saves to /draft/, and returns the file path
+- [ ] **AGENT-05**: Agent asks clarifying questions conversationally when required information is missing (client name, meeting date, meeting purpose), maintaining friendly natural dialogue tone
+- [ ] **AGENT-06**: Agent is transparent about RAG results — explicitly reports what documents were searched, what was found, and what was not found
+- [ ] **AGENT-07**: System prompt includes explicit step sequences for each workflow (meeting brief: identify intent → ask client name → ask date → ask purpose → search RAG → draft docx; QA: search RAG → cite sources; follow-up: similar to brief with different output; chat: conversational response only)
 
-- [ ] **AGENT-01**: LangGraph `StateGraph` orchestrates the pipeline; existing services (query, generation, rerank) become tool nodes with minimal rewrite
+### Client Data
 
-### MCP Tool Registry
+- [ ] **CLIENT-01**: search_client tool retrieves client profile data by advisor_id + client name partial match from a mock JSON data store
+- [ ] **CLIENT-02**: ClientDataStore abstract interface (Protocol/ABC) designed for future SQL backend swap — mock JSON implementation behind the interface, not hardcoded in agent
+- [ ] **CLIENT-03**: Client not found returns a clear "client not found" message to the agent for relay to the adviser
 
-- [ ] **MCP-01**: Agent can invoke RAG query as an internal tool (query → retrieve → rerank → generate)
-- [ ] **MCP-02**: Agent can invoke meeting brief generation as an internal tool
-- [ ] **MCP-03**: Agent can invoke follow-up note drafting as an internal tool
+### Docx Drafting Pipelines
 
-### Skills System
+- [ ] **DOCX-01**: build_brief_docx() produces a meeting brief .docx with header ("CopInvest | Meeting Brief | {client}") and footer (DRAFT disclaimer)
+- [ ] **DOCX-02**: build_followup_docx() produces a follow-up note .docx with header ("CopInvest | Follow-Up Note | {client}") and footer (different from brief disclaimer)
+- [ ] **DOCX-03**: Generated .docx files are saved to /draft/ directory with unique filename; file path is logged in the audit trail
+- [ ] **DOCX-04**: .docx generation runs in asyncio.to_thread() to avoid blocking the async event loop
+- [ ] **DOCX-05**: Agent presents the generated .docx as a downloadable file with a brief inline summary of contents
 
-- [ ] **SKILL-01**: Skills folder contains Markdown files each with a `description:` frontmatter field and step-by-step tool orchestration instructions
-- [ ] **SKILL-02**: On each query, agent reads all skill descriptions and calls fast LLM to select the matching skill; selected skill's full content is injected as system prompt
-- [ ] **SKILL-03**: If intent classification fails or is ambiguous, agent falls back to `qa` skill
+### Audit Extensions
 
-### Meeting Brief Pipeline
+- [ ] **AUDIT-01**: Each tool call (search_rag, search_client, draft_docx) is logged with tool name, input parameters, output summary, and timestamp in a tool_calls JSON column on the AuditLog record
+- [ ] **AUDIT-02**: Tool call trace is displayed as expandable rows in the React audit log dashboard, showing the sequence of tool invocations within each query
+- [ ] **AUDIT-03**: Full end-to-end audit coverage: user message → agent intent → tool calls → final response → document paths, visible in React dashboard
 
-- [ ] **BRIEF-01**: Adviser can request a meeting brief; agent retrieves relevant client/product chunks and generates a structured .docx file
-- [ ] **BRIEF-02**: Telegram delivers the .docx and presents Approve/Edit/Discard inline keyboard; adviser action is recorded in audit log
+### Telegram Integration
 
-### Follow-Up Note Pipeline
+- [ ] **TELE-01**: Telegram message handler routes all incoming messages through the agent orchestration layer instead of directly to the QA pipeline
+- [ ] **TELE-02**: Agent .docx drafts are sent via Telegram as downloadable files using send_document() with proper async file handling
+- [ ] **TELE-03**: Telegram user identity is linked to advisor_id for client data lookup and audit logging
 
-- [ ] **FOLLOW-01**: Adviser can request a follow-up note draft; agent retrieves relevant chunks and generates a compliant .docx file
-- [ ] **FOLLOW-02**: Telegram delivers the .docx and presents Approve/Edit/Discard inline keyboard; adviser action is recorded in audit log
+## Future Requirements
 
-### Telegram Scoping
+Deferred to a later milestone. Tracked but not in the v3.0 roadmap.
 
-- [ ] **TELE-01**: Q&A and summarize responses are returned inline in Telegram with no Approve/Edit/Discard prompt; adviser action flow is only triggered for BRIEF and FOLLOW pipelines
+### Audit Hardening (v4.0)
 
-### Prompt Versioning
-
-- [ ] **PROM-01**: Each prompt template (system prompt + injected skill content) carries a version identifier; version is incremented when the template content changes
-- [ ] **PROM-02**: Each audit log entry records `prompt_version` and `skill_version` used; web UI trace inspector displays both fields
-
-### Chunk Metadata Enrichment
-
-- [ ] **META-01**: Every ingested chunk stores the following additional metadata fields in Qdrant payload:
-  - `page_number` (int) — page in source document
-  - `section_heading` (str) — nearest heading above the chunk
-  - `is_table` (bool) — chunk originates from a table
-  - `is_figure` (bool) — chunk originates from a figure/image
-  - `document_type` (str) — one of: factsheet, compliance_doc, meeting_template, research_report, other
-  - `language` (str) — primary language code, e.g. `en`, `zh`
-  - `jurisdiction` (str) — e.g. `HK`, `SG`, `global`
-  - `product_codes` (list[str]) — product/fund codes mentioned in chunk
-  - `chunk_position` (str) — one of: first, middle, last
-  - `total_chunks_in_doc` (int) — total chunk count for the parent document
-  - `parent_doc_title` (str) — display title of the source document
-
-### Audit Hardening
-
-- [ ] **AUDIT-V2-01**: Audit records are append-only; no UPDATE or DELETE permitted on completed records
-- [ ] **AUDIT-V2-02**: When adviser edits a draft, audit log stores both the AI-generated text and the final adviser-edited text; diff is computable from these two fields
-- [ ] **AUDIT-V2-03**: Audit records carry a `retention_until` timestamp set to 7 years from creation; admin UI displays retention date per record
-
-## v3 Requirements (deferred)
-
-### Compliance Guardrails
-
-- **COMP-01**: System detects when generated response contains specific investment advice or price targets and flags for review
-- **COMP-02**: Faithfulness scoring verifies each claim in the response traces to a retrieved chunk
-
-### Session-Aware Intent Routing
-
-- **SESS-01**: Agent tracks intent history within a session so follow-up messages can inherit prior context (e.g. "now write the follow-up for that")
+- **AUDIT-V4-01**: Prompt versioning — prompt_version column on AuditLog, templates versioned in /backend/prompts/
+- **AUDIT-V4-02**: Adviser edit tracking — diff between AI draft and final adviser-sent version
+- **AUDIT-V4-03**: Immutable append-only audit records with 7-year retention enforcement
+- **AUDIT-V4-04**: Compliance guardrail layer — faithfulness scoring for generated advice
 
 ## Out of Scope
 
+Explicitly excluded. Documented to prevent scope creep.
+
 | Feature | Reason |
 |---------|--------|
-| External MCP server | Internal tool registry only; no external MCP transport/auth needed for v2 |
-| Session-aware skill routing | Per-message classification sufficient for v2; deferred to v3 |
-| Compliance guardrail layer | Deferred to v3 |
-| Faithfulness scoring | Deferred to v3 |
-| Multi-tenant SaaS | Single-firm architecture |
-| CRM write-back | Read-only for now |
-| Autonomous advice delivery | SFC requires human review |
+| LangGraph / agent framework | v2.0 attempt was "messy/unsatisfying"; replaced by prompt-driven tool calling in v3.0 |
+| Internal MCP tool registry | v2.0 MCP approach added unnecessary transport/auth complexity for single-process system |
+| Skills system with per-message classification | v2.0 skill-loading approach failed; replaced by prompt-injected workflow guides |
+| Session-aware intent routing | Multi-turn session handling deferred to v4.0 |
+| Multi-LLM routing (Flash for simple, Pro for complex) | Adds complexity without proportional value at prototype scale |
+| Real-time CRM integration | Adds external dependency; mock JSON sufficient for v3.0 |
+| Auto-sending drafts to clients | Violates SFC human review requirement |
+| Open-ended internet search | Destroys compliance boundary between approved + unapproved content |
+| Streaming .docx generation | .docx is not streamable — assembled atomically |
+| Agent memory across sessions | Per-message independence; session persistence deferred to v4.0 |
 
 ## Traceability
 
+Which phases cover which requirements. Updated during roadmap creation.
+
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ROLE-01 | Phase 6 | Pending |
-| META-01 | Phase 7 | Pending |
-| AGENT-01 | Phase 8 | Pending |
-| MCP-01 | Phase 8 | Pending |
-| MCP-02 | Phase 8 | Pending |
-| MCP-03 | Phase 8 | Pending |
-| SKILL-01 | Phase 8 | Pending |
-| SKILL-02 | Phase 8 | Pending |
-| SKILL-03 | Phase 8 | Pending |
-| BRIEF-01 | Phase 9 | Pending |
-| BRIEF-02 | Phase 9 | Pending |
-| FOLLOW-01 | Phase 9 | Pending |
-| FOLLOW-02 | Phase 9 | Pending |
-| TELE-01 | Phase 9 | Pending |
-| PROM-01 | Phase 10 | Pending |
-| PROM-02 | Phase 10 | Pending |
-| AUDIT-V2-01 | Phase 10 | Pending |
-| AUDIT-V2-02 | Phase 10 | Pending |
-| AUDIT-V2-03 | Phase 10 | Pending |
+| | | |
 
 **Coverage:**
-- v2.0 requirements: 19 total
-- Mapped to phases: 19/19 ✓
-- Unmapped: 0
+- v3 requirements: [X] total
+- Mapped to phases: [Y]
+- Unmapped: [Z] ⚠️
 
 ---
-*Requirements defined: 2026-05-11*
-*Last updated: 2026-05-11 — traceability mapped after roadmap creation*
+*Requirements defined: 2026-05-13*
+*Last updated: 2026-05-13 after v3.0 requirements definition*
