@@ -1,357 +1,399 @@
-# Architecture Patterns
+# Architecture Patterns — v3.0 Agent + Drafting
 
-**Domain:** Compliance-aware RAG assistant for HK investment advisers
-**Researched:** 2026-04-29
+**Domain:** GenAI assistant for Hong Kong investment advisers
+**Researched:** 2026-05-13
+**Confidence:** HIGH
 
 ## Recommended Architecture
 
-The system has two distinct runtime modes: **ingestion** (offline, batch) and **query** (online, real-time). These share the vector store and database but are otherwise independent pipelines. A third surface — the Telegram bot — is a thin gateway that routes into the same query pipeline as the web UI.
+### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  INGESTION PIPELINE (offline / admin-triggered)                 │
-│                                                                 │
-│  Raw Docs (PDF/DOCX/XLSX)                                       │
-│       ↓                                                         │
-│  Document Loader (unstructured / Docling)                       │
-│       ↓                                                         │
-│  Chunker + Metadata Tagger                                      │
-│  (sensitivity_tier, doc_type, source_id, allowed_roles[])       │
-│       ↓                                                         │
-│  Embedding Model (OpenAI text-embedding-3-small)                │
-│       ↓                                                         │
-│  ChromaDB (vectors + metadata)                                  │
-│       ↓                                                         │
-│  PostgreSQL doc_registry (doc metadata, ingestion audit)        │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│  QUERY PIPELINE (online / per-request)                          │
-│                                                                 │
-│  User Query (web UI or Telegram)                                │
-│       ↓                                                         │
-│  FastAPI Auth Middleware (JWT → user_id, roles[])               │
-│       ↓                                                         │
-│  RAG Service                                                     │
-│    1. Embed query (OpenAI)                                      │
-│    2. ChromaDB query with where={allowed_roles: {$contains:     │
-│       user_role}} filter                                        │
-│    3. Re-rank retrieved chunks (optional cross-encoder)         │
-│    4. Build prompt with context + source citations              │
-│    5. OpenAI GPT-4o generation                                  │
-│       ↓                                                         │
-│  Audit Logger → PostgreSQL rag_audit_log                        │
-│       ↓                                                         │
-│  Response with source attribution                               │
-└─────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│  CHANNELS                                                       │
-│                                                                 │
-│  React Web UI ──────────────────────────────────────────────┐  │
-│  (chat + brief generation + source panel)                   │  │
-│                                                             ↓  │
-│  Telegram Bot (aiogram 3.x webhook) ──────────────→ FastAPI    │
-│  (quick queries, text-only responses)               /api/v1    │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    Telegram Bot                           │
+│  (adviser types freetext → agent handler → reply/docx)   │
+└──────────────┬───────────────────────────────┬───────────┘
+               │                               │
+               ▼                               ▼
+┌──────────────────────────┐    ┌──────────────────────────┐
+│    Agent Service (NEW)   │    │  Inline Keyboard Handler │
+│  ┌────────────────────┐  │    │  (approve/edit/discard)  │
+│  │  Tool Loop Engine  │  │    └──────────────────────────┘
+│  │  while not done:   │  │
+│  │  1. LLM thinks     │  │
+│  │  2. tool_calls? →  │  │
+│  │     execute tool    │  │
+│  │  3. append result   │  │
+│  │  4. if final answer │  │
+│  │     → return        │  │
+│  └──────┬─────────────┘  │
+│         │                 │
+│  ┌──────┼─────────────┐  │
+│  │ Tools│              │  │
+│  │ ┌────┴──────────┐  │  │
+│  │ │ search_rag    │──┼──┼──→ query_service.process_query()
+│  │ ├───────────────┤  │  │    (existing RAG pipeline)
+│  │ │ search_client │──┼──┼──→ ClientDataStore.search()
+│  │ ├───────────────┤  │  │    (JSON → future CRM)
+│  │ │ draft_docx    │──┼──┼──→ docx_builder.build_*_docx()
+│  │ └───────────────┘  │  │    (existing + new follow-up)
+│  └────────────────────┘  │
+└──────────┬───────────────┘
+           │
+           ▼
+┌──────────────────────────────────────────────────────────┐
+│              Audit Service (EXTENDED)                     │
+│  - create_audit_record() — agent turn start               │
+│  - log_tool_call() — each tool invocation (NEW)           │
+│  - update_generation() — final answer                     │
+│  - update_adviser_action() — approve/edit/discard         │
+│  - AuditLog.tool_calls JSON column (NEW)                  │
+│  - AuditLog.prompt_version string column (NEW)            │
+└──────────────────────────────────────────────────────────┘
 ```
 
-## Component Boundaries
-
-| Component | Responsibility | Communicates With |
-|-----------|---------------|-------------------|
-| Ingestion Worker | Load, parse, chunk, embed, store docs | ChromaDB (write), PostgreSQL doc_registry (write) |
-| ChromaDB | Vector storage + metadata-filtered retrieval | Ingestion Worker (write), RAG Service (read) |
-| PostgreSQL | Audit log, doc registry, user/role store | RAG Service (write audit), Auth Service (read users) |
-| Auth Middleware | Validate JWT, resolve user roles | PostgreSQL users table, all FastAPI routes |
-| RAG Service | Orchestrate retrieval + generation | ChromaDB, OpenAI API, Audit Logger |
-| Audit Logger | Write full trace per query | PostgreSQL rag_audit_log |
-| FastAPI Backend | HTTP routing, auth, request/response | All backend services |
-| React Frontend | Chat UI, brief generation, source display | FastAPI /api/v1 |
-| Telegram Gateway | Receive webhook updates, format responses | FastAPI /api/v1 (same endpoints as web UI) |
-
-## Data Flow
-
-### Ingestion Flow
+### Agent Tool Loop — Detailed Flow
 
 ```
-1. Admin drops file into /data/inbox/ (or uploads via admin API)
-2. Ingestion worker picks up file
-3. Parser extracts text + structure (unstructured for PDF/DOCX, pandas for XLSX)
-4. Chunker splits into ~512-token chunks with overlap
-5. Metadata tagger attaches:
-   - source_id (UUID)
-   - doc_type (factsheet | compliance | policy | template | data)
-   - sensitivity_tier (1=public | 2=internal | 3=restricted | 4=confidential)
-   - allowed_roles (array: ["adviser", "senior_adviser", "compliance"])
-   - ingested_at, file_hash (for dedup)
-6. Embedding model converts each chunk to vector
-7. ChromaDB stores (vector, metadata, chunk_text)
-8. PostgreSQL doc_registry records (source_id, filename, tier, ingested_at, chunk_count)
+User: "prepare a meeting brief for alex chan next tuesday"
+
+┌─ Turn 0 ──────────────────────────────────────────────┐
+│ LLM (with tools + system prompt):                     │
+│   "User wants a meeting brief for Alex Chan.           │
+│    I need client info and meeting date.                │
+│    Let me search for Alex Chan's profile."             │
+│                                                        │
+│ tool_calls: [{name: "search_client",                   │
+│               arguments: {client_name: "alex chan"}}]   │
+└────────────────────────────────────────────────────────┘
+         │
+         ▼ execute search_client → returns client profile
+         │
+┌─ Turn 1 ──────────────────────────────────────────────┐
+│ LLM (sees client profile in context):                  │
+│   "Alex Chan is a student with moderate risk.          │
+│    Now I need product info for the brief.              │
+│    Let me search for relevant products."               │
+│                                                        │
+│ tool_calls: [{name: "search_rag",                      │
+│               arguments: {query: "investment products  │
+│               suitable for student beginner moderate    │
+│               risk Hong Kong"}}]                       │
+└────────────────────────────────────────────────────────┘
+         │
+         ▼ execute search_rag → returns RAG results (chunks)
+         │
+┌─ Turn 2 ──────────────────────────────────────────────┐
+│ LLM (sees client + RAG results in context):            │
+│   "I have client profile and product info.            │
+│    Let me draft the meeting brief."                    │
+│                                                        │
+│ tool_calls: [{name: "draft_docx",                      │
+│               arguments: {doc_type: "brief",            │
+│               client_name: "Alex Chan",                 │
+│               meeting_date: "2026-05-19",               │
+│               content: "..."}}]                         │
+└────────────────────────────────────────────────────────┘
+         │
+         ▼ execute draft_docx → saves .docx, returns path
+         │
+┌─ Turn 3 ──────────────────────────────────────────────┐
+│ LLM (sees file path):                                  │
+│   content: "I've prepared the meeting brief for        │
+│   Alex Chan. The draft includes [sources].             │
+│   Please review and approve."                          │
+│                                                        │
+│ tool_calls: None → LOOP ENDS                           │
+└────────────────────────────────────────────────────────┘
+         │
+         ▼ Return to Telegram handler
+         │
+         ▼ Handler sends: text summary + .docx file + inline keyboard
 ```
 
-### Query Flow
+### Component Boundaries
+
+| Component | Responsibility | Communicates With | New/Existing |
+|-----------|---------------|-------------------|--------------|
+| `AgentService` (NEW) | Manages tool loop: sends messages to LLM, inspects tool_calls, executes tools, returns final answer | `AsyncOpenAI` (DeepSeek), `ToolRegistry`, `AuditService` | New |
+| `ToolRegistry` (NEW) | Holds tool definitions (JSON schemas) and execution functions. Maps tool names to implementations. | `AgentService`, individual tool implementations | New |
+| `search_rag_tool` (NEW) | Wraps `query_service.process_query()` as a tool. Executes full RAG pipeline. Returns text + sources. | `query_service` (existing) | New wrapper |
+| `search_client_tool` (NEW) | Searches client data via `ClientDataStore`. Returns structured profile. | `ClientDataStore` (new interface) | New |
+| `draft_docx_tool` (NEW) | Calls docx_builder with appropriate template. Returns file path. | `docx_builder` (existing, extended) | New wrapper |
+| `ClientDataStore` (NEW abstract class) | Interface for client data lookup. MockJSON implementation for v3.0. | `search_client_tool` | New |
+| `docx_builder` (EXISTING, extended) | Two functions: `build_brief_docx()`, `build_followup_docx()`. Saves to `/data/drafts/`. | `draft_docx_tool` | Extended |
+| `AuditService` (EXISTING, extended) | New `log_tool_call(audit, tool_name, input, output_summary)` method. | `AgentService`, `AuditLog` model | Extended |
+| `AuditLog` model (EXISTING, extended) | New columns: `tool_calls` (JSON), `prompt_version` (String). | `AuditService` | Extended |
+| `AgentPromptManager` (NEW) | Loads versioned prompt templates from `backend/prompts/`. Returns prompt string + version tag. | `AgentService` | New |
+| Telegram `agent_handler` (NEW) | Replaces existing `handle_query`. Invokes agent loop, sends result + .docx + inline keyboard. | `AgentService`, `python-telegram-bot` | New (replaces handler) |
+| Telegram `callback_handler` (NEW) | Handles inline keyboard callbacks: Approve → mark final, Edit → store diff, Discard → log discard. | `AuditService.update_adviser_action()` (existing) | New |
+| React Audit Dashboard (EXISTING, extended) | New view: tool-call trace as expandable rows within each audit log entry. | `AuditLog.tool_calls` | Extended |
+
+### Data Flow
 
 ```
-1. User sends query (React UI via POST /api/v1/query or Telegram message)
-2. FastAPI auth middleware validates JWT → extracts {user_id, role}
-3. RAG Service:
-   a. Embeds query text via OpenAI
-   b. Queries ChromaDB with:
-      - vector similarity search (top-k=20)
-      - where filter: {allowed_roles: {$contains: user_role}}
-   c. Re-ranks top-20 → top-5 by relevance
-   d. Builds prompt: system instructions + retrieved chunks with [source_N] markers
-   e. Calls OpenAI GPT-4o with prompt
-   f. Parses response, maps [source_N] markers to doc metadata
-4. Audit Logger writes to PostgreSQL:
-   - trace_id, user_id, query_text
-   - retrieved_chunks (JSONB: [{chunk_id, doc_id, score, snippet}])
-   - prompt_sent (full prompt text)
-   - llm_response (raw generation)
-   - model_used, latency_ms, timestamp
-5. Response returned: {answer, sources: [{title, doc_type, tier, chunk_snippet}]}
+1. Adviser sends freetext via Telegram
+2. Telegram handler → AgentService.run(query, user_id, user_role)
+3. AgentService creates audit record (status: received)
+4. AgentService loads prompt template (version v3.0.0)
+5. AgentService sends [system_prompt + tools] + user message to DeepSeek V4 Pro
+6. LLM responds with either:
+   a. tool_calls → AgentService executes tools, logs each call, appends results, loops (max 5 turns)
+   b. content (final answer) → AgentService returns
+7. AgentService updates audit: status → generated, records final answer, prompt_version
+8. If tool loop produced draft_docx → Telegram handler sends .docx + inline keyboard
+9. If tool loop produced text-only → Telegram handler sends text + sources
+10. Adviser interaction with inline keyboard → callback_handler updates audit: status → completed
 ```
-
-### Telegram Gateway Flow
-
-```
-1. Telegram sends POST to /webhook/telegram (HTTPS)
-2. aiogram dispatcher parses Update object
-3. Handler extracts message text + telegram_user_id
-4. Gateway maps telegram_user_id → internal user_id (lookup table in PostgreSQL)
-5. Calls same RAG Service as web UI (shared service layer)
-6. Formats response as plain text (no rich HTML — Telegram markdown only)
-7. Sends reply via Telegram Bot API
-```
-
-## FastAPI Backend Structure
-
-```
-backend/
-├── main.py                    # App factory, lifespan (DB + ChromaDB init)
-├── core/
-│   ├── config.py              # Settings (pydantic-settings, env vars)
-│   ├── database.py            # SQLAlchemy async engine + session factory
-│   ├── security.py            # JWT decode, password hashing
-│   └── dependencies.py        # FastAPI Depends: get_db, get_current_user
-├── routers/
-│   ├── query.py               # POST /api/v1/query
-│   ├── briefs.py              # POST /api/v1/briefs (meeting brief generation)
-│   ├── documents.py           # GET /api/v1/documents (list accessible docs)
-│   ├── auth.py                # POST /api/v1/auth/token
-│   ├── admin/
-│   │   └── ingest.py          # POST /api/v1/admin/ingest (trigger ingestion)
-│   └── webhook.py             # POST /webhook/telegram
-├── services/
-│   ├── rag_service.py         # Core: embed → retrieve → generate
-│   ├── ingestion_service.py   # Parse → chunk → embed → store
-│   ├── audit_service.py       # Write audit log entries
-│   └── brief_service.py       # Meeting brief orchestration (wraps rag_service)
-├── repositories/
-│   ├── vector_repo.py         # ChromaDB queries (filtered retrieval)
-│   ├── audit_repo.py          # PostgreSQL audit log writes/reads
-│   ├── document_repo.py       # PostgreSQL doc_registry CRUD
-│   └── user_repo.py           # PostgreSQL user/role lookups
-├── models/
-│   ├── user.py                # SQLAlchemy: users, roles
-│   ├── audit_log.py           # SQLAlchemy: rag_audit_log
-│   └── document.py            # SQLAlchemy: doc_registry
-├── schemas/
-│   ├── query.py               # QueryRequest, QueryResponse, SourceCitation
-│   ├── brief.py               # BriefRequest, BriefResponse
-│   └── auth.py                # TokenRequest, TokenResponse
-└── workers/
-    └── ingest_worker.py       # Standalone ingestion script (not a FastAPI route)
-```
-
-Key FastAPI patterns:
-- `lifespan` context manager initializes ChromaDB client and DB connection pool at startup
-- All routes use `Depends(get_current_user)` — no unauthenticated access to RAG endpoints
-- `rag_service.py` is the only place that calls OpenAI and ChromaDB — keeps LLM logic isolated
-- Telegram webhook handler calls `rag_service` directly, not via HTTP — avoids internal HTTP round-trip
-
-## RBAC and Permission Filtering
-
-### Sensitivity Tiers
-
-| Tier | Label | Example Documents | Accessible By |
-|------|-------|-------------------|---------------|
-| 1 | Public | Product factsheets, general guides | All advisers |
-| 2 | Internal | Meeting templates, process docs | All advisers |
-| 3 | Restricted | Client-specific analysis, risk reports | Senior advisers + compliance |
-| 4 | Confidential | Compliance investigations, regulatory filings | Compliance only |
-
-### Implementation Pattern
-
-Documents are tagged at ingestion with `allowed_roles` as a metadata array (ChromaDB metadata arrays, supported since Feb 2026). At query time, the user's role is injected as a `where` filter:
-
-```python
-# In vector_repo.py
-results = collection.query(
-    query_embeddings=[query_embedding],
-    n_results=20,
-    where={"allowed_roles": {"$contains": user_role}},
-    include=["documents", "metadatas", "distances"]
-)
-```
-
-This is pre-retrieval filtering — the LLM never sees documents the user cannot access. Post-retrieval checks are not needed for this architecture because ChromaDB enforces the filter at the vector search layer.
-
-Roles are stored in PostgreSQL and resolved at auth time. The JWT payload includes `role` so every request carries its own permission context without a DB lookup per query.
-
-## Audit Log Schema
-
-```sql
-CREATE TABLE rag_audit_log (
-    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    trace_id        UUID NOT NULL,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    user_id         UUID NOT NULL REFERENCES users(id),
-    channel         TEXT NOT NULL,          -- 'web' | 'telegram'
-    query_text      TEXT NOT NULL,
-    retrieved_chunks JSONB NOT NULL,        -- [{chunk_id, doc_id, score, snippet}]
-    prompt_sent     TEXT NOT NULL,
-    llm_response    TEXT NOT NULL,
-    model_used      TEXT NOT NULL,
-    latency_ms      INTEGER,
-    adviser_edited  BOOLEAN DEFAULT FALSE,  -- did adviser modify the output?
-    adviser_action  TEXT,                   -- 'sent' | 'discarded' | 'saved'
-    metadata        JSONB
-);
-
-CREATE INDEX idx_audit_user_id ON rag_audit_log(user_id);
-CREATE INDEX idx_audit_created_at ON rag_audit_log(created_at);
-CREATE INDEX idx_audit_trace_id ON rag_audit_log(trace_id);
-```
-
-The `adviser_edited` and `adviser_action` fields are critical for SFC compliance — they record whether the adviser used, modified, or discarded the AI-generated output. The React UI must send a follow-up PATCH to record this action.
 
 ## Patterns to Follow
 
-### Pattern 1: Pre-Retrieval Permission Filtering
-**What:** Inject user role as a ChromaDB `where` filter before vector search
-**When:** Every query — no exceptions
-**Why:** Ensures the LLM context window never contains documents the user cannot access. Post-retrieval filtering is a fallback, not a substitute.
+### Pattern 1: Tool Definition Schema
 
-### Pattern 2: Immutable Audit Log
-**What:** Audit log rows are INSERT-only. No UPDATE or DELETE.
-**When:** Every query, every generation
-**Why:** SFC compliance requires tamper-evident records. Use PostgreSQL row-level security to prevent application-layer deletes.
+**What:** Define each tool as a standard OpenAI-compatible function schema with clear descriptions that guide LLM tool selection.
 
-### Pattern 3: Source Attribution in Prompt
-**What:** Each retrieved chunk is prefixed with `[source_N]` in the prompt. The system instruction requires the LLM to cite sources inline.
-**When:** All generation calls
-**Why:** Prevents hallucination of advice not grounded in approved documents. Citations are parsed from the response and returned as structured metadata.
+**When:** For every tool the agent can call.
 
-### Pattern 4: Shared Service Layer for All Channels
-**What:** Telegram gateway and React UI both call `rag_service.py` directly — not via internal HTTP
-**When:** Any new channel added
-**Why:** Avoids duplicating RAG logic. Audit logging happens in the service layer, so all channels are automatically audited.
+**Example:**
+```python
+SEARCH_RAG_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "search_rag",
+        "description": "Search the internal document library for product information, fund factsheets, compliance guidelines, and market data. Use this for ANY question about investment products, fund performance, fees, rules, or regulations. Returns source-attributed text with citation markers.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query. Be specific: include product names, fund codes, or topic keywords.",
+                }
+            },
+            "required": ["query"],
+        },
+    },
+}
 
-### Pattern 5: Async Throughout
-**What:** All FastAPI routes, service calls, and DB operations use `async/await`
-**When:** All I/O operations (ChromaDB, OpenAI, PostgreSQL)
-**Why:** OpenAI API calls can take 2-10 seconds. Blocking the event loop would serialize all requests.
+SEARCH_CLIENT_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "search_client",
+        "description": "Look up a client's profile including risk tolerance, portfolio holdings, investment objectives, KYC status, and meeting history. Use this when the user mentions a client by name and the query requires personalized information (meeting brief, follow-up note, portfolio review).",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "client_name": {
+                    "type": "string",
+                    "description": "The client's name (partial match supported). E.g., 'Alex Chan' or 'Wong'.",
+                }
+            },
+            "required": ["client_name"],
+        },
+    },
+}
+
+DRAFT_DOCX_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "draft_docx",
+        "description": "Generate a .docx draft document. Use for meeting briefs and follow-up notes. The file is saved to /draft/ and must be reviewed by the adviser before use.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "doc_type": {
+                    "type": "string",
+                    "enum": ["meeting_brief", "follow_up_note"],
+                    "description": "Type of document to generate.",
+                },
+                "client_name": {"type": "string", "description": "Client's full name."},
+                "title": {"type": "string", "description": "Document title or subject line."},
+                "content": {"type": "string", "description": "The full document content in markdown format. Include all sections, findings, and source citations."},
+                "meeting_date": {"type": "string", "description": "Meeting date in YYYY-MM-DD format. Optional — use if known."},
+            },
+            "required": ["doc_type", "client_name", "title", "content"],
+        },
+    },
+}
+```
+
+### Pattern 2: Agent Tool Loop (While-Not-Done)
+
+**What:** A simple loop that sends messages to the LLM, inspects the response, executes any requested tool calls, and repeats until the LLM produces a final text answer.
+
+**When:** Every user message that requires agent processing.
+
+**Example:**
+```python
+MAX_TOOL_TURNS = 5
+
+async def run_agent_turn(
+    client: AsyncOpenAI,
+    messages: list[dict],
+    tools: list[dict],
+    tool_executors: dict[str, callable],
+    audit: AuditLog,
+    db: AsyncSession,
+) -> dict:
+    """Run the agent tool loop. Returns {answer, sources, tool_calls_made, draft_path?}."""
+    tool_calls_made = []
+    
+    for turn in range(MAX_TOOL_TURNS):
+        response = await client.chat.completions.create(
+            model="deepseek-v4-pro",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",
+            temperature=0.0,
+        )
+        
+        msg = response.choices[0].message
+        messages.append(msg.model_dump())
+        
+        if msg.tool_calls is None:
+            # Final answer — no more tools needed
+            return {
+                "answer": msg.content,
+                "sources": extract_sources(msg.content, messages),
+                "tool_calls_made": tool_calls_made,
+            }
+        
+        # Execute each tool call
+        for tool_call in msg.tool_calls:
+            tool_name = tool_call.function.name
+            tool_args = json.loads(tool_call.function.arguments)
+            
+            result = await tool_executors[tool_name](**tool_args)
+            
+            # Log the tool call
+            await audit_service.log_tool_call(
+                db, audit, turn + 1, tool_name, tool_args, result
+            )
+            tool_calls_made.append({
+                "turn": turn + 1,
+                "tool": tool_name,
+                "input": tool_args,
+                "output_summary": str(result)[:500],
+            })
+            
+            # Append tool result to conversation
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": json.dumps(result) if isinstance(result, dict) else str(result),
+            })
+    
+    # Max turns exceeded — ask LLM to produce answer with whatever context it has
+    messages.append({
+        "role": "user",
+        "content": "Please provide the best answer you can with the information gathered so far. Do not call any more tools."
+    })
+    response = await client.chat.completions.create(
+        model="deepseek-v4-pro",
+        messages=messages,
+        temperature=0.0,
+    )
+    return {
+        "answer": response.choices[0].message.content,
+        "sources": [],
+        "tool_calls_made": tool_calls_made,
+        "warning": "Max tool turns reached",
+    }
+```
+
+### Pattern 3: ClientDataStore Abstraction
+
+**What:** Abstract interface for client data retrieval, with mock JSON implementation for v3.0.
+
+**When:** Any time the agent needs client profile data. Ensures tool code is CRM-agnostic.
+
+**Example:**
+```python
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+@dataclass
+class ClientProfile:
+    client_id: str
+    name: str
+    risk_tolerance: str
+    portfolio: list[dict]
+    goals: list[dict]
+    kyc_status: str
+    meeting_history: list[dict]
+    raw: dict  # Full data for LLM context
+
+class ClientDataStore(ABC):
+    @abstractmethod
+    async def search(self, advisor_id: str, client_name: str) -> list[ClientProfile]:
+        """Search clients by advisor and name (partial match)."""
+        ...
+
+class MockJSONClientDataStore(ClientDataStore):
+    def __init__(self, data_dir: str = "./demo_material"):
+        self.data_dir = Path(data_dir)
+        self._profiles: dict[str, ClientProfile] = {}
+        self._load_profiles()
+    
+    def _load_profiles(self):
+        # Load .json and .md files, parse into ClientProfile objects
+        ...
+    
+    async def search(self, advisor_id: str, client_name: str) -> list[ClientProfile]:
+        name_lower = client_name.lower()
+        return [
+            p for p in self._profiles.values()
+            if name_lower in p.name.lower()
+        ]
+```
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Post-Retrieval Permission Filtering
-**What:** Retrieve all documents, then filter by role after
-**Why bad:** The LLM may still see restricted content in the context window before filtering. Also wastes tokens and latency.
-**Instead:** Always filter at the ChromaDB query layer with `where` metadata filters.
+### Anti-Pattern 1: Agent Framework Overuse
 
-### Anti-Pattern 2: Storing Full Prompt in Application Memory Only
-**What:** Keeping the prompt in memory and only logging a summary
-**Why bad:** Fails SFC audit requirements. If the system is restarted, the trace is lost.
-**Instead:** Write the full `prompt_sent` text to PostgreSQL before calling the LLM.
+**What:** Importing LangGraph, LangChain agents, or similar frameworks to manage a 3-tool agent.
 
-### Anti-Pattern 3: Telegram Bot as Separate Backend
-**What:** Running a separate Python process for the Telegram bot with its own RAG logic
-**Why bad:** Duplicates ingestion, retrieval, and audit logic. Telegram interactions won't appear in the unified audit log.
-**Instead:** Telegram bot is a webhook endpoint in the same FastAPI app, calling the shared service layer.
+**Why bad:** v2.0 already proved this approach is "messy/unsatisfying" for this use case. These frameworks add abstraction layers that obscure the simple LLM→tool→LLM loop. Debugging becomes harder, dependencies multiply, and the framework's opinionated structure fights against simple prompt-driven orchestration.
 
-### Anti-Pattern 4: Chunking Without Metadata
-**What:** Storing chunks in ChromaDB without source metadata
-**Why bad:** Cannot implement permission filtering. Cannot generate source citations. Cannot trace which document produced which answer.
-**Instead:** Every chunk must carry `source_id`, `doc_type`, `sensitivity_tier`, `allowed_roles`, `page_number` (for PDFs).
+**Instead:** Use the pattern above — a while-loop with the standard OpenAI SDK. 30 lines of Python vs 200+ lines of framework configuration. Easier to debug (print messages array at each turn), easier to audit (explicit tool call logging), easier to customize agent behavior (edit the prompt, not framework code).
 
-### Anti-Pattern 5: Synchronous Ingestion in Request Handler
-**What:** Triggering document ingestion inside a FastAPI request handler and waiting for it
-**Why bad:** Ingestion of a large PDF can take 30-120 seconds. This will timeout.
-**Instead:** Ingestion is a background worker (separate script or Celery task). The API endpoint just enqueues the job and returns immediately.
+### Anti-Pattern 2: Mode Classification as Separate Step
+
+**What:** Running a classifier before the agent to determine "this is a QA query" vs "this is a brief request," then routing to different handling paths.
+
+**Why bad:** This was the v2.0 skill-classification approach that failed. It adds latency (extra LLM call), creates misclassification edge cases, and fragments the handling logic. The LLM's tool-calling capability already performs intent detection as a natural byproduct of selecting tools.
+
+**Instead:** The agent's system prompt describes all capabilities. The LLM decides which tools to use based on the user's query. If it picks `draft_docx`, it's a brief/follow-up intent. If it picks `search_rag` only, it's QA. If it picks neither, it's chat. No separate classifier needed.
+
+### Anti-Pattern 3: Blocking Audit Writes
+
+**What:** Writing tool-call audit records synchronously within the agent loop, blocking the next LLM call until the DB write completes.
+
+**Why bad:** Adds latency to every tool turn. With 3-4 tool calls per agent turn, this could add 200-400ms of unnecessary wait time.
+
+**Instead:** Use `asyncio.create_task()` or FastAPI `BackgroundTasks` for audit writes. The agent loop continues immediately after dispatching the audit write. In the unlikely event of an audit write failure, the tool call is still logged to structlog (application logs), providing a fallback trace.
+
+### Anti-Pattern 4: Hardcoded Prompt in Agent Code
+
+**What:** Embedding the agent system prompt as a Python string constant in `agent_service.py`.
+
+**Why bad:** Prompt iteration is the primary development workflow for prompt-driven agents. Hardcoding requires code deploys for every prompt tweak. Makes A/B testing impossible.
+
+**Instead:** Load from versioned files in `backend/prompts/`. The file header contains a version tag. At startup, `AgentPromptManager` loads the latest version. Audit logs record which version was used. Prompt updates become file changes tracked in git, not code changes.
 
 ## Scalability Considerations
 
-| Concern | At prototype (5 users) | At small firm (50 users) | At scale (500+ users) |
-|---------|----------------------|--------------------------|----------------------|
-| Vector store | ChromaDB local file | ChromaDB server mode | Migrate to pgvector or Weaviate |
-| LLM calls | Direct OpenAI API | Direct OpenAI API + rate limit handling | OpenAI with org-level rate limits or Azure OpenAI |
-| Audit log | PostgreSQL single table | PostgreSQL + indexes | Partition by month, add read replica |
-| Auth | Simple JWT + PostgreSQL | Same | Add SSO/SAML integration |
-| Ingestion | Manual trigger | Scheduled batch | Event-driven (file watcher or S3 trigger) |
-| Deployment | Single VM | Single VM or small VPS | Container + managed DB |
-
-For v1 (prototype), ChromaDB in local persistent mode on a single VM is sufficient. The architecture is designed so ChromaDB can be swapped for pgvector without changing the service layer — `vector_repo.py` is the only file that knows about the vector store implementation.
-
-## Suggested Build Order
-
-Dependencies drive this order — each phase unblocks the next.
-
-```
-Phase 1: Data Foundation
-  → PostgreSQL schema (users, doc_registry, audit_log)
-  → ChromaDB setup with metadata schema
-  → Auth middleware (JWT)
-  Unblocks: everything else
-
-Phase 2: Ingestion Pipeline
-  → Document loaders (PDF, DOCX, XLSX)
-  → Chunker + metadata tagger
-  → Embedding + ChromaDB write
-  Unblocks: RAG retrieval (needs data in the store)
-
-Phase 3: RAG Query Pipeline
-  → vector_repo.py with permission filtering
-  → rag_service.py (embed → retrieve → generate)
-  → audit_service.py
-  → FastAPI /api/v1/query endpoint
-  Unblocks: all user-facing surfaces
-
-Phase 4: React Web UI
-  → Chat interface with streaming
-  → Source attribution panel
-  → Adviser action tracking (edited/sent/discarded)
-  Unblocks: primary user workflow
-
-Phase 5: Brief Generation
-  → brief_service.py (structured prompt for meeting briefs)
-  → /api/v1/briefs endpoint
-  → Brief UI in React
-  Depends on: Phase 3 (RAG pipeline)
-
-Phase 6: Telegram Gateway
-  → aiogram webhook setup
-  → Telegram user → internal user mapping
-  → Webhook endpoint in FastAPI
-  Depends on: Phase 3 (RAG pipeline)
-  Can be parallel with: Phase 4 (React UI)
-```
-
-The Telegram gateway (Phase 6) can be built in parallel with the React UI (Phase 4) because both depend only on the RAG service layer being complete. Brief generation (Phase 5) is a specialization of the query pipeline, not a new component.
+| Concern | At 5 advisers (v3.0) | At 50 advisers | At 500 advisers |
+|---------|----------------------|----------------|-----------------|
+| Agent LLM latency | ~3-8s per turn (3-4 tool calls). Acceptable. | Same. DeepSeek API scales. | Consider Flash for simple QA (cost optimization). |
+| Tool-call audit writes | SQLite + BackgroundTasks. Fine. | Postgres with connection pooling. | Separate audit DB or write-behind queue. |
+| Client data store | Mock JSON. Instant. | Switch to SQLite `clients` table. | Postgres `clients` table with full-text search. |
+| .docx storage | Local `/data/drafts/`. Fine. | Same. Add cleanup cron for >90-day drafts. | Object storage (S3/MinIO) with retention policies. |
+| Prompt versioning | Git-tracked files. Fine. | Same. | Admin UI for prompt management + A/B testing. |
 
 ## Sources
 
-- [Permissions, Security, and Compliance in RAG Pipelines](https://unified.to/blog/permissions_security_and_compliance_in_rag_pipelines) — MEDIUM confidence (WebSearch, March 2026)
-- [Implementing Granular Access Control in RAG Applications](https://willrodbard.com/2025/09/11/implementing-granular-access-control-in-rag-applications/) — MEDIUM confidence (WebSearch, Sept 2025)
-- [ChromaDB Metadata Filtering — Official Docs](https://docs.trychroma.com/docs/querying-collections/metadata-filtering) — HIGH confidence (official docs)
-- [ChromaDB Metadata Arrays Changelog](https://www.trychroma.com/changelog/metadata-arrays) — HIGH confidence (official changelog, Feb 2026)
-- [Implementing Authorization in RAG-Based AI Systems — Cerbos](https://docs.cerbos.dev/cerbos/0.42.0/recipes/ai/rag-authorization/index.html) — HIGH confidence (official docs)
-- [RAG Engineering Part 6: Security, Compliance, and Cost Optimization](https://medium.com/@adnansattar09/rag-engineering-part-6-security-compliance-and-cost-optimization-56b65f11a56a) — MEDIUM confidence (WebSearch, Jan 2026)
-- [FastAPI Webhooks & Aiogram: A Winning Combo](https://wiki.fremontleaf.org/official-files/fastapi-webhooks-and-aiogram-a-winning-combo-1764797230) — MEDIUM confidence (WebSearch)
-- [Build a Smarter Telegram Bot: Integrating a RAG Pipeline](https://www.endpointdev.com/blog/2025/12/telegram-bot-rag-pipeline/) — MEDIUM confidence (WebSearch, Dec 2025)
-- [Audit Logging: Tracking Which Documents Answered Which Queries](https://theneuralbase.com/rag-fundamentals/learn/advanced/audit-logging-tracking-which-documents-answered-which-queries/) — MEDIUM confidence (WebSearch)
-- [Production-Ready FastAPI Project Structure (2026 Guide)](https://dev.to/thesius_code_7a136ae718b7/production-ready-fastapi-project-structure-2026-guide-b1g) — MEDIUM confidence (WebSearch, Mar 2026)
-- [LangChain UnstructuredPDFLoader — Official Docs](https://python.langchain.com/docs/integrations/document_loaders/unstructured_pdfloader/) — HIGH confidence (official docs)
-- [LangChain Docling Integration — Official Docs](https://python.langchain.com/docs/integrations/document_loaders/docling) — HIGH confidence (official docs)
-- [MUI X Sources & Citations Component](https://mui.com/x/react-chat/display/message-parts/sources-and-citations/) — HIGH confidence (official docs)
+- DeepSeek API — Function Calling flow and tool call response format: https://api-docs.deepseek.com/guides/function_calling (HIGH confidence)
+- DeepSeek API — Tool Calls with thinking mode (multi-turn example): https://api-docs.deepseek.com/guides/thinking_mode (HIGH confidence)
+- DeepSeek API — Chat Completion response schema (tool_calls field): https://api-docs.deepseek.com/api/create-chat-completion (HIGH confidence)
+- CopInvest codebase — existing `query_service.py`, `docx_builder.py`, `audit_service.py`, `AuditLog` model (HIGH confidence — primary sources)
+- CopInvest PROJECT.md — v2.0 failures, v3.0 approach decision: "replaced by prompt-driven orchestration in v3.0" (HIGH confidence)

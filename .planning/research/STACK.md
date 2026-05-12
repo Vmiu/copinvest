@@ -1,163 +1,93 @@
-# Technology Stack
+# Technology Stack — v3.0 Agent + Drafting Additions
 
-**Project:** CopInvest — Compliance-aware RAG assistant for HK investment advisers
-**Researched:** 2026-04-29
-**Overall confidence:** HIGH (all major choices verified against current docs/releases)
+**Project:** CopInvest
+**Researched:** 2026-05-13
+**Confidence:** HIGH
 
----
+> **Note:** This documents only stack additions for the v3.0 agent+drafting milestone. The existing RAG stack (DeepSeek V4 Pro/Flash, Voyage AI embeddings, cohere rerank, Qdrant, FastAPI, React, python-telegram-bot, docling) is unchanged. See project root `STACK.md` for the full v1.0/v2.0 stack.
 
-## Recommended Stack
+## Recommended Stack — New Additions
 
-### Core RAG Framework
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| LlamaIndex | 0.12.x (latest: 0.12.46) | RAG orchestration, retrieval, query engine | Purpose-built for RAG; first-class metadata filtering, chunking strategies, and query engine abstractions. Outperforms LangChain on retrieval accuracy for document Q&A. Active 2025 release cadence. |
-| openai | >=1.68.0 | LLM completions + embeddings | Official SDK, async-native (`AsyncOpenAI`), streaming via `.stream()` context manager. |
-
-**Why LlamaIndex over LangChain:** LangChain is a general-purpose LLM orchestration framework — better when agents + tool use are the core concern. CopInvest is a RAG-first product (document Q&A, meeting briefs, source attribution). LlamaIndex's `VectorStoreIndex`, `MetadataFilters`, and `QueryEngine` abstractions map directly to this use case with less boilerplate. LangChain's LCEL adds complexity without benefit here.
-
-**Why not custom RAG:** LlamaIndex handles chunking, embedding, retrieval, re-ranking, and source attribution out of the box. Custom pipelines require rebuilding all of this and are harder to maintain.
-
-### Vector Store
+### Agent Orchestration
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| Qdrant | qdrant-client 1.17.x | Vector storage + metadata-filtered retrieval | Pre-filtering architecture (filters applied before ANN search, not post-hoc) is critical for sensitivity-tier RBAC. `must` filter on `sensitivity_tier` payload field enforces access control at the DB layer. Rust-based, production-hardened, runs as a single Docker container. |
+| DeepSeek V4 Pro (tool calling mode) | current | Agent LLM for intent routing + tool selection + final generation | Native OpenAI-compatible function calling API (`tools`, `tool_choice`). 80.6% SWE-Bench Verified for agentic tasks. Three reasoning modes (non-think/think-high/think-max) enable adjustable depth. No additional framework needed — pure `AsyncOpenAI` client already in use. |
+| openai (Python SDK) | >=1.68.0 (already installed) | Chat completions with tool calling | The `tools` parameter is standard in the OpenAI SDK. DeepSeek API is fully compatible. `response.choices[0].message.tool_calls` returns `[{id, function: {name, arguments}}]`. |
 
-**Why Qdrant over ChromaDB:** ChromaDB is excellent for prototyping but lacks production-hardened filtering performance and has no distributed mode. For this project, sensitivity-tier filtering is a first-class requirement — Qdrant's pre-filtering ensures unauthorized documents are never retrieved, not just filtered post-retrieval. This is the correct security model.
+**Why not LangGraph/LangChain:** The v2.0 attempt with LangGraph StateGraph was abandoned as "messy/unsatisfying" (per PROJECT.md). For 3 tools and a single-turn agent, a framework adds abstraction overhead without benefit. DeepSeek V4 Pro's 1M-token context window and native reasoning make prompt-driven orchestration sufficient.
 
-**Why Qdrant over pgvector:** pgvector's SQL-based filtering is expressive, but adds a Postgres dependency. Qdrant runs standalone as a Docker container, keeping the deployment simpler for a single-VM prototype. pgvector is the right choice if Postgres is already in the stack; it isn't here.
-
-**Why Qdrant over FAISS:** FAISS is an in-process library with no built-in metadata filtering, persistence, or server mode. It requires custom wrappers for everything CopInvest needs. Not appropriate.
-
-### Embedding Model
+### Client Data Store
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| text-embedding-3-small | current | Document + query embeddings | $0.02/1M tokens vs $0.13/1M for `large` — 6.5x cheaper with only ~2-3 MTEB point difference. For a small internal corpus (factsheets, compliance docs, meeting templates), the quality delta is not meaningful. 1536 dimensions, supports Matryoshka dimension reduction. |
+| JSON files on disk | — | Mock client data store for v3.0 | Two demo profiles already exist (`client_alex_chan.json`, `client_profile_wong_km.md`). No database needed yet. Simple `json.load()` + in-memory search (name partial match). |
+| `ClientDataStore` (abstract class) | — | Interface for future CRM backend | `abc.ABC` with `search(advisor_id: str, client_name: str) -> ClientProfile`. Mock implementation reads JSON. Future DB implementation swaps in without changing agent tool code. |
 
-### LLM Model
+**Why not SQLite/Postgres for client data now:** Only 2-3 demo profiles. Schema not finalized. CRM integration deferred to v4.0. Abstract interface ensures the code investment today isn't wasted when upgrading.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| gpt-4o | current | Response generation | Strong instruction-following for structured outputs (meeting briefs, follow-up notes). Constrained by system prompt to cite sources only from retrieved context — no hallucinated advice. |
-
-### Backend Framework
+### .docx Drafting
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| FastAPI | 0.128.x | REST API + SSE streaming | Async-native, `StreamingResponse` for token streaming to the React UI, `BackgroundTasks` for non-blocking audit log writes. Auto-generates OpenAPI docs. Pydantic v2 validation built in. |
-| SQLAlchemy | 2.0.x | ORM for audit log + user/doc metadata | Async session (`AsyncSession`) with `async_sessionmaker`. Event hooks for audit trail. Declarative models. |
-| SQLite (dev) / PostgreSQL (prod) | — | Audit log + user/permission storage | SQLite for local dev (zero config), Postgres for cloud VM. SQLAlchemy abstracts the difference. |
-| Alembic | latest | DB migrations | Standard SQLAlchemy migration tool. |
+| python-docx | latest (already installed) | .docx generation with headers/footers | Already used in `build_brief_docx()`. Header via `section.header.paragraphs[0].text`, footer via `section.footer.paragraphs[0].text`. Supports tab-based zoned headers (`"Left\tCenter\tRight"` with Header style). |
+| pathlib | stdlib | File path management | `Path("./data/drafts/")` for draft storage. Already used in existing docx_builder. |
 
-### Document Ingestion
+**Two builder functions:**
+- `build_brief_docx(title, client_name, content, meeting_date?)` → Header: "CopInvest | Meeting Brief | {client_name}" / Footer: "DRAFT — generated by CopInvest for adviser review. Not for distribution to clients without approval."
+- `build_followup_docx(title, client_name, content, meeting_date?)` → Header: "CopInvest | Follow-Up Note | {client_name}" / Footer: "DRAFT — AI-generated follow-up. Adviser review required before sending to client."
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| docling | 2.x (latest: 2.91.0) | PDF, Word (.docx), Excel (.xlsx) parsing | IBM-backed, purpose-built for AI/RAG pipelines. Handles complex PDFs (tables, figures, multi-column layouts) with high fidelity. Exports to structured markdown. Actively developed — v2.91.0 as of April 2026. Single library covers all three required formats. |
-
-**Why docling over unstructured:** `unstructured` is battle-tested but has a heavier dependency footprint and a managed API tier that adds cost. `docling` is fully local, lighter, and has better structured output for RAG (preserves table structure, section hierarchy). For a single-firm prototype with internal docs, docling is the cleaner choice.
-
-**Why not pypdf alone:** pypdf handles PDF text extraction only. CopInvest requires Word and Excel too. docling covers all three.
-
-### Frontend
+### Audit Logging Extensions
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| React | 18.x | Web UI framework | Specified in project constraints. |
-| @assistant-ui/react | 0.12.x (latest: 0.12.26) | Chat UI with streaming | Purpose-built for AI chat UIs. Handles streaming token rendering, message threads, tool call display, and source citation rendering. Active release cadence (0.12.26 published April 2026). Avoids building a custom streaming chat component from scratch. |
-| Tailwind CSS | 3.x | Styling | Utility-first, pairs well with assistant-ui components. |
+| SQLAlchemy JSON column | 2.0.x (already installed) | Store tool-call trace in AuditLog | `tool_calls: Mapped[dict | None] = mapped_column(JSON, nullable=True)` holds array of `{turn, tool_name, tool_input, tool_output_summary, timestamp}`. SQLite supports JSON columns natively. |
+| SQLAlchemy String column | 2.0.x | Prompt version tracking | `prompt_version: Mapped[str | None] = mapped_column(String, nullable=True)` records which template version was active (e.g., "v3.0.0"). |
 
-**Why @assistant-ui/react over building custom:** Streaming chat UIs have non-trivial edge cases (partial token rendering, abort handling, scroll-to-bottom, message state). assistant-ui solves these. It integrates with the Vercel AI SDK data stream format, which FastAPI can emit via SSE.
+**Alternative considered: Separate `ToolCallLog` table.** Rejected for v3.0 — adds join complexity without proportional benefit for 3-5 tool calls per turn. JSON column keeps audit query simple. Can migrate to separate table if tool-call volume grows significantly.
 
-### Telegram Bot
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| python-telegram-bot | 22.x (latest: 22.7) | Telegram bot for quick mobile queries | Fully async (asyncio + httpx), `ConversationHandler` for multi-step flows, built-in webhook runner (`Application.run_webhook()`). The de-facto standard Python Telegram library. |
-
-**Integration pattern:** The Telegram bot runs as a separate async process (or alongside FastAPI via webhook). It calls the same internal RAG service layer as the web API — no duplicated logic. Audit logging applies to Telegram queries identically.
-
-### Audit Logging
+### Prompt Template Management
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| SQLAlchemy AsyncSession | 2.0.x | Audit record persistence | Dedicated `AuditLog` table. Written via `BackgroundTasks` in FastAPI so it never blocks the response. |
-| structlog | latest | Structured application logging | JSON-structured logs for operational observability. Separate from the compliance audit trail (which lives in the DB). |
-
-**Audit record schema (minimum):**
-- `id`, `timestamp`, `user_id`, `channel` (web/telegram)
-- `query_text`, `retrieved_doc_ids` (JSON array), `sensitivity_tier_accessed`
-- `generated_response` (full text), `adviser_edited` (bool), `final_response`
-- `model_used`, `prompt_tokens`, `completion_tokens`
-
-This schema supports SFC audit requirements: every query → retrieved docs → generated output → adviser action is traceable.
-
----
+| Python string templates / .txt files | — | Versioned prompt templates | Store in `backend/prompts/agent_v3_0_0.txt` (or similar). Read at agent instantiation. Version tag embedded in file header comment. Audit log records the version used. |
+| `importlib.resources` or direct file read | stdlib | Loading prompt templates | Simple file read is sufficient for single-VM deployment. No template engine needed — the prompt is a static string with variables interpolated via Python f-strings or `.format()`. |
 
 ## Alternatives Considered
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| RAG framework | LlamaIndex | LangChain | LangChain is agent-first; heavier for pure RAG. LlamaIndex has better retrieval abstractions for document Q&A. |
-| RAG framework | LlamaIndex | Custom pipeline | Rebuilds chunking, embedding, retrieval, re-ranking from scratch. Maintenance burden without benefit. |
-| Vector store | Qdrant | ChromaDB | ChromaDB lacks production-hardened pre-filtering. Post-retrieval filtering is wrong security model for RBAC. |
-| Vector store | Qdrant | FAISS | No server mode, no metadata filtering, no persistence. Requires custom wrappers for everything. |
-| Vector store | Qdrant | pgvector | Adds Postgres dependency. Qdrant is simpler for single-VM deployment without existing Postgres. |
-| Embedding model | text-embedding-3-small | text-embedding-3-large | 6.5x more expensive ($0.13 vs $0.02/1M tokens) for ~2-3 MTEB point gain. Not justified for small internal corpus. |
-| Document ingestion | docling | unstructured | Heavier deps, managed API tier adds cost. docling is fully local and has better structured output for RAG. |
-| Document ingestion | docling | pypdf | PDF-only. CopInvest requires Word and Excel too. |
-| Chat UI | @assistant-ui/react | Custom component | Streaming chat has non-trivial edge cases. assistant-ui solves them. |
-| Telegram | python-telegram-bot | aiogram | Both are async. python-telegram-bot has larger community, better docs, and ConversationHandler is well-tested. |
-
----
+| Agent framework | Prompt-driven (no framework) | LangGraph | v2.0 attempt failed — "messy/unsatisfying". Overhead for 3 tools. |
+| Agent framework | Prompt-driven (no framework) | Custom state machine | Rebuilds what LLM does natively (intent detection, tool selection). Maintenance burden. |
+| Client data store | Mock JSON + abstract interface | SQLite client table | Premature schema design for 2 profiles. Abstract interface preserves future flexibility. |
+| Client data store | Mock JSON + abstract interface | Direct CRM API integration | External dependency, auth complexity, data mapping. Deferred to v4.0. |
+| Tool-call audit | JSON column on AuditLog | Separate ToolCallLog table | Adds join complexity. JSON column is simpler for 3-5 calls/turn. Can migrate later. |
+| Prompt templating | Static .txt files | Jinja2 templates | Overkill for a single system prompt with minimal interpolation. |
+| Prompt templating | Static .txt files | Database-stored prompts | Adds UI complexity for prompt editing. Deferred to admin dashboard enhancement (v3.x). |
+| Telegram .docx delivery | `send_document()` | Web download link | Advisers primarily use Telegram. Adding web downloads creates dual delivery paths. |
+| Telegram inline keyboard | `InlineKeyboardButton` | ReplyKeyboardMarkup | Inline keyboard appears within the message (not as persistent buttons). Better UX for per-draft actions. |
 
 ## Installation
 
 ```bash
-# Backend core
-pip install fastapi uvicorn[standard] sqlalchemy[asyncio] alembic aiosqlite asyncpg
+# No new packages required — all v3.0 additions use existing dependencies:
+# - openai (already installed for DeepSeek API)
+# - python-docx (already installed for build_brief_docx)
+# - sqlalchemy (already installed for ORM)
+# - python-telegram-bot (already installed for Telegram bot)
+# - pathlib (stdlib)
 
-# RAG stack
-pip install llama-index llama-index-vector-stores-qdrant qdrant-client openai
-
-# Document ingestion
-pip install docling
-
-# Telegram bot
-pip install python-telegram-bot
-
-# Observability
-pip install structlog
-
-# Dev
-pip install pytest pytest-asyncio httpx
+# New directories to create:
+mkdir -p backend/prompts data/drafts
 ```
-
-```bash
-# Frontend
-npm install @assistant-ui/react react react-dom
-npm install -D tailwindcss
-```
-
----
 
 ## Sources
 
-- LlamaIndex Python docs: https://developers.llamaindex.ai/python/
-- LlamaIndex releases: https://github.com/run-llama/llama_index/releases (v0.12.46 latest as of July 2025)
-- Qdrant filtering docs: https://qdrant.tech/documentation/search/filtering/
-- Qdrant Python client: https://python-client.qdrant.tech/ (v1.17.1 latest)
-- ChromaDB cookbook (metadata filtering): https://cookbook.chromadb.dev/core/filters
-- OpenAI Python SDK: https://github.com/openai/openai-python (v1.68.0+)
-- OpenAI embedding pricing: https://tokenmix.ai/blog/openai-embedding-pricing
-- FastAPI releases: https://github.com/fastapi/fastapi/releases (v0.128.1 latest)
-- docling: https://github.com/docling-project/docling (v2.91.0 latest)
-- @assistant-ui/react: https://www.npmjs.com/package/@assistant-ui/react (v0.12.26 latest)
-- python-telegram-bot: https://docs.python-telegram-bot.org/en/v22.7/ (v22.7 latest)
-- LangChain vs LlamaIndex 2026: https://dev.to/lycore/langchain-vs-llamaindex-in-2026-what-we-actually-use-and-why-52eb
-- Vector DB comparison 2026: https://4xxi.com/articles/vector-database-comparison
-- Qdrant RBAC pattern: https://dev.to/quamernasim/enhancing-data-security-with-role-based-access-control-of-qdrant-vector-database-1ii4
-- FastAPI audit logging patterns: https://blog.greeden.me/en/2026/03/17/a-practical-introduction-to-audit-log-design-in-fastapi-design-and-implementation-patterns-for-safely-recording-who-did-what-and-when/
+- DeepSeek API — Function Calling: https://api-docs.deepseek.com/guides/function_calling (HIGH confidence — official docs)
+- DeepSeek API — Tool Calls guide with Python examples: https://api-docs.deepseek.com/guides/tool_calls (HIGH confidence)
+- DeepSeek API — Chat Completion parameters (tools, tool_choice): https://api-docs.deepseek.com/api/create-chat-completion (HIGH confidence)
+- DeepSeek V4 Pro model card — agentic benchmarks: https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro (HIGH confidence)
+- DeepSeek V4 Pro review — 80.6% SWE-Bench Verified: https://www.mindstudio.ai/blog/deepseek-v4-open-source-frontier-model-review (MEDIUM confidence)
+- python-docx — Header/Footer API: https://github.com/python-openxml/python-docx/blob/master/docs/dev/analysis/features/header.rst (HIGH confidence)
+- python-docx — Sections and headers user guide: https://github.com/python-openxml/python-docx/blob/master/docs/user/hdrftr.rst (HIGH confidence)
+- CopInvest codebase — `backend/services/docx_builder.py`, `backend/models/audit_log.py` (HIGH confidence — primary sources)
