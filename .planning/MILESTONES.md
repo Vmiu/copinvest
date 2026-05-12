@@ -22,3 +22,23 @@
 
 - `.planning/milestones/v1.0-ROADMAP.md`
 - `.planning/milestones/v1.0-REQUIREMENTS.md`
+
+## v2.0 Agent Skills & Audit Hardening
+
+**Shipped:** 2026-05-13
+**Phases:** 6–7 | **Plans:** 7 | **Timeline:** 2026-05-11 → 2026-05-13 (2 days)
+
+### What Shipped
+
+1. Role consolidation: `compliance` → `admin` rename across DB migrations, enums, RBAC guards, Qdrant, and frontend
+2. Chunk metadata enrichment: 11 META-01 fields in Qdrant payload (page_number, section_heading, document_type, language, jurisdiction, product_codes, is_table, is_figure, chunk_position, total_chunks_in_doc, parent_doc_title)
+3. DB registry extended with 5 new columns, frontend ingest form + document registry with filters wiring
+
+### Closed Early — Deferred to Next Milestone
+
+Phases 8–10 (Agent Framework, Drafting Pipelines, Audit Hardening) were deferred. The bot needs a workflow redesign to handle 4 distinct modes (brief draft, Q&A, follow-up note, chat) rather than the originally planned LangGraph + skill-classification approach.
+
+### Archives
+
+- `.planning/phases/06-role-consolidation/`
+- `.planning/phases/07-chunk-metadata-enrichment/`

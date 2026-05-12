@@ -1,0 +1,29 @@
+{
+  "user_profile": {
+    "age_band": "22-29",
+    "region": "Hong Kong",
+    "employment_status": "student",
+    "income_band": "0-20000_HKD",
+    "monthly_savings": 3000
+  },
+  "financials": {
+    "cash": 20000,
+    "investments": 15000,
+    "debt": 0,
+    "emergency_fund_months": 4
+  },
+  "goals": [
+    {
+      "name": "long_term_wealth",
+      "target_amount": 500000,
+      "target_year": 2035,
+      "priority": "high"
+    }
+  ],
+  "risk_profile": {
+    "experience": "beginner",
+    "max_drop_tolerance": "20_percent",
+    "volatility_reaction": "hold",
+    "liquidity_need": "medium"
+  }
+}

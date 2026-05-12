@@ -24,6 +24,11 @@ async def upsert_document_record(db: AsyncSession, record: DocumentRecord) -> Do
         existing.extraction_method = record.extraction_method
         # Do not overwrite ingested_at — preserve original ingestion timestamp
         existing.ingested_by = record.ingested_by
+        existing.document_type = record.document_type
+        existing.language = record.language
+        existing.jurisdiction = record.jurisdiction
+        existing.product_codes = record.product_codes
+        existing.parent_doc_title = record.parent_doc_title
         await db.flush()
         return existing
     db.add(record)
