@@ -77,13 +77,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| | | |
+| AGENT-01 | Phase 8 | Pending |
+| AGENT-02 | Phase 8 | Pending |
+| AGENT-03 | Phase 8 | Pending |
+| AGENT-04 | Phase 9 | Pending |
+| AGENT-05 | Phase 8 | Pending |
+| AGENT-06 | Phase 8 | Pending |
+| AGENT-07 | Phase 8 | Pending |
+| AUDIT-01 | Phase 8 | Pending |
+| CLIENT-01 | Phase 9 | Pending |
+| CLIENT-02 | Phase 9 | Pending |
+| CLIENT-03 | Phase 9 | Pending |
+| DOCX-01 | Phase 9 | Pending |
+| DOCX-02 | Phase 9 | Pending |
+| DOCX-03 | Phase 9 | Pending |
+| DOCX-04 | Phase 9 | Pending |
+| DOCX-05 | Phase 9 | Pending |
+| AUDIT-02 | Phase 10 | Pending |
+| AUDIT-03 | Phase 10 | Pending |
+| TELE-01 | Phase 11 | Pending |
+| TELE-02 | Phase 11 | Pending |
+| TELE-03 | Phase 11 | Pending |
 
 **Coverage:**
-- v3 requirements: [X] total
-- Mapped to phases: [Y]
-- Unmapped: [Z] ⚠️
+- v3 requirements: 21 total
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-13*
-*Last updated: 2026-05-13 after v3.0 requirements definition*
+*Last updated: 2026-05-13 after v3.0 roadmap creation*

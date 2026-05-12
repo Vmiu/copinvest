@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: v3.0 Agent Workflows & Drafting Pipelines
 status: planning
-last_updated: "2026-05-12T18:21:23.454Z"
-last_activity: 2026-05-12
+last_updated: "2026-05-13T00:00:00.000Z"
+last_activity: 2026-05-13
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,35 +17,37 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-11)
+See: .planning/PROJECT.md (updated 2026-05-13)
 
 **Core value:** Advisers can ask a question and get an accurate, source-attributed answer from approved internal documents — with every interaction fully auditable.
-**Current focus:** v2.0 — Complete (Phases 6–7 shipped)
+**Current focus:** v3.0 Agent Workflows & Drafting Pipelines — prompt-driven agent + .docx drafting + compliance audit extensions
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 8 — Agent Framework + RAG Tool + Audit Schema
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-12 — Milestone v3.0 started
+Status: Roadmap defined (4 phases, 21 requirements)
+Last activity: 2026-05-13 — Roadmap created for v3.0
+
+## v3.0 Phases
+
+| Phase | Goal | Requirements | Status |
+|-------|------|--------------|--------|
+| 8. Agent Framework + RAG + Audit Schema | Freetext agent routes to QA/chat, cites sources, audit schema ready | 7 (AGENT-01–03,05–07, AUDIT-01) | Not started |
+| 9. Client Lookup + Docx Drafting | Client search + meeting brief/follow-up .docx with headers/footers | 9 (AGENT-04, CLIENT-01–03, DOCX-01–05) | Not started |
+| 10. Audit Dashboard — Tool Call Visibility | Expandable tool-call trace in React audit dashboard | 2 (AUDIT-02–03) | Not started |
+| 11. Telegram Integration | Agent routing, .docx delivery, user→advisor_id linking | 3 (TELE-01–03) | Not started |
 
 ## Performance Metrics
 
 **Velocity (v1.0 baseline):**
-
 - Total plans completed: 17
 - Average duration: ~5min
 - Total execution time: ~1.5 hours
 
-**By Phase (v1.0):**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-data-foundation | 4 | 17min | 4.3min |
-| 02-document-ingestion | 4 | 28min | 7min |
-| 03-rag-query-pipeline | 3 | — | — |
-| 04-telegram-bot | 3 | — | — |
-| 05-web-audit-ui | 3 | — | — |
+**Velocity (v2.0):**
+- Total plans completed: 7
+- Total execution time: ~0.5 hours
 
 *Updated after each plan completion*
 
@@ -60,31 +62,15 @@ Recent decisions affecting current work:
 - Roadmap: Audit trail and RBAC in Phase 1 — SFC regulatory requirement, not optional
 - Roadmap (revised 2026-04-29): Telegram is the PRIMARY adviser interface — full Q&A, draft review flow (Approve/Edit/Discard inline keyboard), and action tracking in audit trail
 - Roadmap (revised 2026-04-29): React web UI is an audit/admin dashboard only — audit log viewer, trace inspector, document registry, admin ingestion; not a chat interface
-- 01-01: Used get_settings() factory with lru_cache for testable config without hardcoded secrets
-- 01-01: AuditLog uses progressive lifecycle fields (status enum tracks received→retrieved→generated→completed)
-- 01-02: Used pwdlib BcryptHasher explicitly (not PasswordHash.recommended()) for deterministic hasher selection
-- 01-02: Added GET /api/v1/auth/me as protected test endpoint for verifying token-based access
-- 01-02: Alembic async env.py reads DB URL from get_settings() (not hardcoded in alembic.ini)
-- 01-03: Used db.flush() in service functions (not commit) -- caller controls transaction boundary
-- 01-03: Normalized datetime comparison to naive UTC for SQLite compatibility
-- 01-04: RBAC filtering uses single MatchValue on allowed_roles -- Qdrant pre-filters before ANN search
-- 01-04: Lifespan wraps Qdrant init in try/except so app starts without Docker running
-- 02-01: openai_api_key has no default — forces explicit env config, never logged (T-02-05)
-- 02-01: upsert_chunks generates UUID point IDs — avoids ID conflicts across re-ingestion cycles
-- 02-01: require_role(*roles) factory pattern for role-based endpoint protection
-- 02-02: AsyncOpenAI client injected as parameter in chunking/embedding services — no get_settings() in service modules (testability, D-01)
-- 02-02: openai>=1.68.0 added to pyproject.toml — was missing from declared dependencies
-- 02-03: TIER_TO_ROLES maps SensitivityTier members to allowed_roles lists — Qdrant payload enforces RBAC pre-filtering at ingestion time
-- 02-03: delete_by_source before upsert — idempotent re-ingestion replaces existing chunks (D-12)
-- 02-03: docling parse runs in asyncio.to_thread() — CPU-bound operation never blocks event loop
-- 02-04: current_user["user_id"] not "sub" — get_current_user() returns {"user_id": ..., "role": ...} not JWT claims directly
-- 02-04: setup_collection() required in qdrant_memory fixture — in-memory Qdrant starts with no collections
-- 02-04: ingested_at excluded from upsert update path — SQLAlchemy lambda default only fires on INSERT, not on Python object copy
-- 05-02: React pinned to ^18.3.1 — Vite scaffold installs React 19 by default
-- 05-02: Page components use lazy() — App.tsx compiles without page implementations; stubs replaced in Plan 05-03
-- v2.0 roadmap: compliance → admin rename is Phase 6 (own phase) — touches DB migration, enums, all require_role() call sites, frontend labels
-- v2.0 roadmap: META-01 is Phase 7 (own phase) — requires Qdrant payload schema change + DB migration + full re-ingestion
+- v2.0 roadmap: compliance → admin rename is Phase 6 (own phase)
+- v2.0 roadmap: META-01 is Phase 7 (own phase)
 - v2.0 roadmap: Phases 8–10 (Agent Framework, Drafting Pipelines, Audit Hardening) deferred to next milestone — needs workflow redesign
+- v3.0 roadmap: Prompt-driven agent (no LangGraph/agent framework) — v2.0 LangGraph approach abandoned as "messy/unsatisfying"
+- v3.0 roadmap: AGENT requires AUDIT schema first — tool_calls JSON column must exist before agent writes to it; AUDIT-01 placed in Phase 8
+- v3.0 roadmap: CLIENT and DOCX developed together in Phase 9 — tools can be built in parallel behind abstract interface
+- v3.0 roadmap: TELE is final phase — agent's value is unlocked by Telegram integration; all previous phases work through API
+- v3.0 roadmap: python-docx is already in pyproject.toml (v1.0 dependency); no new package installations required
+- v3.0 roadmap: DOCX builders wrap in asyncio.to_thread() from first implementation (DOCX-04)
 
 ### Pending Todos
 
@@ -98,13 +84,17 @@ None.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Compliance | COMP-01: investment advice detection | v3 | 2026-05-11 |
-| Compliance | COMP-02: faithfulness scoring | v3 | 2026-05-11 |
-| Agent | SESS-01: session-aware intent routing | v3 | 2026-05-11 |
+| Compliance | COMP-01: investment advice detection | v4.0 | 2026-05-11 |
+| Compliance | COMP-02: faithfulness scoring | v4.0 | 2026-05-11 |
+| Agent | SESS-01: session-aware intent routing | v4.0 | 2026-05-11 |
+| Audit | AUDIT-V4-01: prompt versioning | v4.0 | 2026-05-13 |
+| Audit | AUDIT-V4-02: adviser edit tracking | v4.0 | 2026-05-13 |
+| Audit | AUDIT-V4-03: immutable append-only with 7-year retention | v4.0 | 2026-05-13 |
+| Audit | AUDIT-V4-04: compliance guardrail layer | v4.0 | 2026-05-13 |
 
 ## Session Continuity
 
 Last session: 2026-05-13
-Stopped at: v2.0 milestone complete (Phases 6–7, 2/2 requirements shipped)
+Stopped at: v3.0 roadmap created (4 phases, 21 requirements mapped)
 Resume file: None
-Next action: Define next milestone (workflow redesign for agent + drafting + audit hardening)
+Next action: `/gsd-plan-phase 8` to begin Agent Framework + RAG Tool + Audit Schema

@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 MVP** — Phases 1–5 (shipped 2026-05-10)
-- 📋 **v2.0 Agent Skills & Audit Hardening** — Phases 6–10 (planned 2026-05-11)
+- ✅ **v2.0 Agent Skills & Audit Hardening** — Phases 6–7 (shipped 2026-05-13)
 
 ## Phases
 
@@ -20,13 +20,20 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 </details>
 
-### 📋 v2.0 Agent Skills & Audit Hardening
+<details>
+<summary>✅ v2.0 Agent Skills & Audit Hardening (Phases 6–7) — SHIPPED 2026-05-13</summary>
 
 - [x] **Phase 6: Role Consolidation** — Rename `compliance` → `admin` across DB, enums, RBAC guards, and frontend (3/3 plans) — completed 2026-05-11
 - [x] **Phase 7: Chunk Metadata Enrichment** — Add 11 metadata fields to Qdrant payload schema, DB registry, and re-ingest all documents (4/4 plans) — completed 2026-05-11
-- [ ] **Phase 8: Agent Framework & Skills** — LangGraph StateGraph wraps existing services as tool nodes; skills system with per-message intent classification
-- [ ] **Phase 9: Drafting Pipelines** — Meeting brief and follow-up note .docx generation with Telegram Approve/Edit/Discard; Q&A scoped to inline-only
-- [ ] **Phase 10: Audit Hardening & Prompt Versioning** — Immutable audit records, 7-year retention, edit diff storage, prompt/skill version tracking
+
+</details>
+
+### 📋 v3.0 Agent Workflows & Drafting Pipelines
+
+- [ ] **Phase 8: Agent Framework + RAG Tool + Audit Schema** — Prompt-driven agent loop with search_rag tool, freetext intent routing, clarifying questions, and audit schema extension
+- [ ] **Phase 9: Client Lookup + Docx Drafting** — search_client tool, meeting brief + follow-up note .docx builders, file storage, and draft_docx agent tool
+- [ ] **Phase 10: Audit Dashboard — Tool Call Visibility** — Expandable tool-call trace rows in React audit dashboard, full end-to-end audit visibility
+- [ ] **Phase 11: Telegram Integration** — Route all Telegram messages through agent, deliver .docx as Telegram files, link Telegram identity to advisor_id
 
 ## Phase Details
 
@@ -60,40 +67,52 @@ Plans:
 - [x] 07-03-PLAN.md — Frontend: extend ingest form + document registry
 - [x] 07-04-PLAN.md — Tests
 
-### Phase 8: Agent Framework & Skills
-**Goal**: Queries are routed through a LangGraph StateGraph that classifies intent, loads the matching skill as system prompt, and dispatches to the correct internal tool
-**Depends on**: Phase 7
-**Requirements**: AGENT-01, MCP-01, MCP-02, MCP-03, SKILL-01, SKILL-02, SKILL-03
+### Phase 8: Agent Framework + RAG Tool + Audit Schema
+**Goal**: Advisers send freetext queries and the agent routes them to QA or chat mode, searching documents and citing sources — with tool-call audit infrastructure ready
+**Depends on**: Phase 7 (v2.0 complete)
+**Requirements**: AGENT-01, AGENT-02, AGENT-03, AGENT-05, AGENT-06, AGENT-07, AUDIT-01
 **Success Criteria** (what must be TRUE):
-  1. A Q&A query flows through the LangGraph graph and returns a source-attributed answer — existing retrieval quality is preserved
-  2. Sending a query that matches the `brief` skill causes the agent to load the brief skill's system prompt and invoke the brief tool node
-  3. An ambiguous or unrecognised query falls back to the `qa` skill without error
-  4. Skills folder contains at least `qa`, `brief`, and `followup` Markdown files each with a `description:` frontmatter field
+  1. Adviser sends a product or regulation question — agent calls `search_rag` and returns a source-attributed answer with `[N]` citations preserved
+  2. Adviser sends casual conversation ("hello", "what can you do?") — agent responds without calling any tools (chat mode)
+  3. When an adviser's query is ambiguous, the agent asks a clarifying question conversationally before searching
+  4. When asked "what documents did you search?", the agent transparently reports what was searched, what was found, and what was not found
+  5. The AuditLog table has a `tool_calls` JSON column and every `search_rag` invocation is logged with tool name, input parameters, output summary, and timestamp
 **Plans**: TBD
+**UI hint**: yes
 
-### Phase 9: Drafting Pipelines
-**Goal**: Advisers can request meeting briefs and follow-up notes via Telegram and receive a .docx file with an Approve/Edit/Discard keyboard; Q&A and summarize return inline with no action prompt
+### Phase 9: Client Lookup + Docx Drafting
+**Goal**: Advisers can look up client profiles and the agent generates meeting brief and follow-up note .docx files with proper headers, DRAFT disclaimers, and audit trail
 **Depends on**: Phase 8
-**Requirements**: BRIEF-01, BRIEF-02, FOLLOW-01, FOLLOW-02, TELE-01
+**Requirements**: AGENT-04, CLIENT-01, CLIENT-02, CLIENT-03, DOCX-01, DOCX-02, DOCX-03, DOCX-04, DOCX-05
 **Success Criteria** (what must be TRUE):
-  1. Adviser sends a brief request in Telegram and receives a .docx attachment with an Approve/Edit/Discard inline keyboard
-  2. Adviser sends a follow-up note request in Telegram and receives a .docx attachment with an Approve/Edit/Discard inline keyboard
-  3. Adviser action (Approve/Edit/Discard) on a brief or follow-up is recorded in the audit log
-  4. A plain Q&A query in Telegram returns an inline answer with no Approve/Edit/Discard prompt
+  1. Adviser asks "prepare a meeting brief for [client name]" — agent searches client data, asks for date/purpose if missing, generates a .docx with "CopInvest | Meeting Brief | {client}" header and DRAFT disclaimer footer
+  2. Adviser asks for a follow-up note — agent generates a .docx with "CopInvest | Follow-Up Note | {client}" header and a distinct disclaimer footer
+  3. Generated .docx is saved to `/data/drafts/` with a unique filename and the file path is logged in the audit trail
+  4. .docx generation runs in `asyncio.to_thread()` and does not block other concurrent requests
+  5. When a client name is not found, the agent receives a clear "client not found" message from `search_client` and relays it to the adviser
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 10: Audit Hardening & Prompt Versioning
-**Goal**: Audit records are immutable and retention-stamped; every record traces the exact prompt and skill version used; admin UI exposes retention dates and version fields
-**Depends on**: Phase 9
-**Requirements**: PROM-01, PROM-02, AUDIT-V2-01, AUDIT-V2-02, AUDIT-V2-03
+### Phase 10: Audit Dashboard — Tool Call Visibility
+**Goal**: Compliance users can inspect the complete tool-call trace for every query in the React audit dashboard, seeing the sequence of agent decisions from intent through document drafts
+**Depends on**: Phase 9 (needs tool calls flowing through the agent pipeline)
+**Requirements**: AUDIT-02, AUDIT-03
 **Success Criteria** (what must be TRUE):
-  1. Attempting to UPDATE or DELETE a completed audit record via the API returns an error; only INSERT is permitted
-  2. When an adviser edits a draft, the audit record stores both the original AI-generated text and the final edited text
-  3. Each audit record displays a `retention_until` date (creation + 7 years) in the admin UI trace inspector
-  4. The trace inspector shows `prompt_version` and `skill_version` for every audit record
+  1. Compliance user opens an audit log entry in the React dashboard and sees expandable rows for each tool call made during that query
+  2. Each expandable tool-call row shows the tool name, input parameters (sanitized), output summary, and timestamp in a readable format
+  3. Full end-to-end audit trail is visible in the dashboard: user message → agent intent → tool calls in execution order → final response → document file paths
 **Plans**: TBD
 **UI hint**: yes
+
+### Phase 11: Telegram Integration
+**Goal**: Advisers use CopInvest entirely through Telegram — all messages route through the agent, .docx files arrive as downloads, and adviser identity links to client data
+**Depends on**: Phase 10
+**Requirements**: TELE-01, TELE-02, TELE-03
+**Success Criteria** (what must be TRUE):
+  1. Adviser sends any message in Telegram — it is routed through the agent orchestration layer, not directly to the QA pipeline
+  2. Agent generates a .docx draft — the file is delivered to the adviser via Telegram as a downloadable document with inline keyboard actions
+  3. Telegram user identity is linked to `advisor_id` — client lookups return only that adviser's clients
+**Plans**: TBD
 
 ## Progress
 
@@ -105,36 +124,40 @@ Plans:
 | 4. Telegram Bot | v1.0 | 3/3 | ✓ Complete | 2026-05-09 |
 | 5. Web Audit & Admin UI | v1.0 | 3/3 | ✓ Complete | 2026-05-10 |
 | 6. Role Consolidation | v2.0 | 3/3 | ✓ Complete | 2026-05-11 |
-| 7. Chunk Metadata Enrichment | v2.0 | 0/? | Not started | — |
-| 8. Agent Framework & Skills | v2.0 | 0/? | Not started | — |
-| 9. Drafting Pipelines | v2.0 | 0/? | Not started | — |
-| 10. Audit Hardening & Prompt Versioning | v2.0 | 0/? | Not started | — |
+| 7. Chunk Metadata Enrichment | v2.0 | 4/4 | ✓ Complete | 2026-05-11 |
+| 8. Agent Framework + RAG + Audit Schema | v3.0 | 0/TBD | Not started | — |
+| 9. Client Lookup + Docx Drafting | v3.0 | 0/TBD | Not started | — |
+| 10. Audit Dashboard — Tool Call Visibility | v3.0 | 0/TBD | Not started | — |
+| 11. Telegram Integration | v3.0 | 0/TBD | Not started | — |
 
-## Coverage Map (v2.0)
+## Coverage Map (v3.0)
 
 | Requirement | Phase |
 |-------------|-------|
-| ROLE-01 | Phase 6 |
-| META-01 | Phase 7 |
 | AGENT-01 | Phase 8 |
-| MCP-01 | Phase 8 |
-| MCP-02 | Phase 8 |
-| MCP-03 | Phase 8 |
-| SKILL-01 | Phase 8 |
-| SKILL-02 | Phase 8 |
-| SKILL-03 | Phase 8 |
-| BRIEF-01 | Phase 9 |
-| BRIEF-02 | Phase 9 |
-| FOLLOW-01 | Phase 9 |
-| FOLLOW-02 | Phase 9 |
-| TELE-01 | Phase 9 |
-| PROM-01 | Phase 10 |
-| PROM-02 | Phase 10 |
-| AUDIT-V2-01 | Phase 10 |
-| AUDIT-V2-02 | Phase 10 |
-| AUDIT-V2-03 | Phase 10 |
+| AGENT-02 | Phase 8 |
+| AGENT-03 | Phase 8 |
+| AGENT-05 | Phase 8 |
+| AGENT-06 | Phase 8 |
+| AGENT-07 | Phase 8 |
+| AUDIT-01 | Phase 8 |
+| AGENT-04 | Phase 9 |
+| CLIENT-01 | Phase 9 |
+| CLIENT-02 | Phase 9 |
+| CLIENT-03 | Phase 9 |
+| DOCX-01 | Phase 9 |
+| DOCX-02 | Phase 9 |
+| DOCX-03 | Phase 9 |
+| DOCX-04 | Phase 9 |
+| DOCX-05 | Phase 9 |
+| AUDIT-02 | Phase 10 |
+| AUDIT-03 | Phase 10 |
+| TELE-01 | Phase 11 |
+| TELE-02 | Phase 11 |
+| TELE-03 | Phase 11 |
 
-**Mapped: 19/19 ✓**
+**Mapped: 21/21 ✓**
 
 ---
-*v2.0 roadmap created: 2026-05-11*
+
+*v3.0 roadmap created: 2026-05-13*
